@@ -54,12 +54,87 @@ func _on_month() -> void:
 			tax_mod += 0.02 * ruler.stewardship
 			research_mod += 0.015 * ruler.learning
 			manpower_mod += 0.015 * ruler.martial
+		# Religious and cultural unity (% of own provinces matching state). Higher
+		# unity = lower unrest tendency + small bonuses to tax/manpower.
+		var match_rel: int = 0
+		var match_cul: int = 0
+		var land_count: int = 0
+		for pid in c.province_ids:
+			var pp: Province = GameState.provinces[pid]
+			if pp == null or pp.is_sea: continue
+			land_count += 1
+			if pp.religion == c.state_religion: match_rel += 1
+			if pp.culture == c.primary_culture: match_cul += 1
+		var rel_unity: float = 1.0 if land_count == 0 else float(match_rel) / float(land_count)
+		var cul_unity: float = 1.0 if land_count == 0 else float(match_cul) / float(land_count)
+		tax_mod += 0.10 * (rel_unity - 0.5)
+		manpower_mod += 0.10 * (cul_unity - 0.5)
 		for pid in c.province_ids:
 			var p: Province = GameState.provinces[pid]
-			income += p.base_tax() * tax_mod
-			research += 0.5 * p.development * research_mod
-			culture += 0.3 * p.development * culture_mod
-			manpower_recover += 30.0 * p.development * manpower_mod
+			if p == null:
+				continue
+			if p.is_sea:
+				continue
+			# Building stat multipliers stack across all completed buildings.
+			var ptax: float = 1.0
+			var pman: float = 1.0
+			var pres: float = 1.0
+			var pcul: float = 1.0
+			var ptrade: float = 1.0
+			for b_id in p.buildings:
+				var bdef: Dictionary = GameState.buildings_db.get(b_id, {})
+				ptax *= float(bdef.get("tax_mult", 1.0))
+				pman *= float(bdef.get("manpower_mult", 1.0))
+				pres *= float(bdef.get("research_mult", 1.0))
+				pcul *= float(bdef.get("culture_mult", 1.0))
+				ptrade *= float(bdef.get("trade_mult", 1.0))
+			# Mismatched culture/religion bumps unrest a little, dampens tax.
+			var mismatch_pen: float = 1.0
+			if p.religion != c.state_religion: mismatch_pen *= 0.85
+			if p.culture != c.primary_culture: mismatch_pen *= 0.90
+			income += p.base_tax() * tax_mod * ptax * mismatch_pen
+			research += 0.5 * p.development * research_mod * pres
+			culture += 0.3 * p.development * culture_mod * pcul
+			manpower_recover += 30.0 * p.development * manpower_mod * pman
+			# Trade: a market or harbour generates extra gold per resource owned.
+			var has_market: bool = p.buildings.has("market") or p.buildings.has("harbour")
+			if has_market and p.resource != "":
+				income += 1.5 * ptrade
+			# Process active building.
+			if p.build_id != "":
+				p.build_progress_months += 1.0
+				var bd: Dictionary = GameState.buildings_db.get(p.build_id, {})
+				var need: float = float(bd.get("build_months", 1))
+				if p.build_progress_months >= need:
+					p.buildings.append(p.build_id)
+					GameState.log_event("[%s] %s built in %s." % [c.name, String(bd.get("name_key", p.build_id)), p.name], Color(0.7, 0.9, 1.0))
+					p.build_id = ""
+					p.build_progress_months = 0.0
+			# Religious conversion project.
+			if p.convert_religion_to != "" and p.convert_religion_months > 0.0:
+				var speed: float = 1.0
+				if p.buildings.has("temple"): speed *= 1.5
+				p.convert_religion_months -= speed
+				if p.convert_religion_months <= 0.0:
+					p.religion = p.convert_religion_to
+					GameState.log_event("[%s] %s converted to %s." % [c.name, p.name, p.religion], Color(0.85, 0.7, 1.0))
+					p.convert_religion_to = ""
+					p.convert_religion_months = 0.0
+			# Cultural assimilation (slow, no upkeep — flag-only).
+			if p.convert_culture_to != "" and p.convert_culture_months > 0.0:
+				p.convert_culture_months -= 1.0
+				if p.convert_culture_months <= 0.0:
+					p.culture = p.convert_culture_to
+					GameState.log_event("[%s] %s assimilated to %s culture." % [c.name, p.name, p.culture], Color(0.7, 0.95, 0.95))
+					p.convert_culture_to = ""
+					p.convert_culture_months = 0.0
+			# Auto-creep: very slow drift toward owner culture in unconverted provinces.
+			elif p.culture != c.primary_culture and GameState.rng.randf() < 0.005:
+				p.convert_culture_to = c.primary_culture
+				p.convert_culture_months = 60.0
+			# Unrest from mismatched religion/culture (small per-month tick).
+			if p.religion != c.state_religion: p.unrest = min(p.unrest + 0.02, 10.0)
+			if p.culture != c.primary_culture: p.unrest = min(p.unrest + 0.01, 10.0)
 		# Upkeep
 		var upkeep: float = 0.0
 		for uid in c.unit_ids:

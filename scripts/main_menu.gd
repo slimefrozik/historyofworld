@@ -8,6 +8,13 @@ var era_buttons: Array[Button] = []
 var country_buttons: Dictionary = {} # cid -> Button
 var start_button: Button
 var preview_label: RichTextLabel
+var lang_buttons: Array[Button] = []
+var title_label: Label
+var subtitle_label: Label
+var era_section_label: Label
+var country_section_label: Label
+var lang_label: Label
+var hint_label: Label
 
 const BG_COLOR := Color(0.07, 0.10, 0.16, 1.0)
 
@@ -19,23 +26,23 @@ func _ready() -> void:
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
-	var title := Label.new()
-	title.text = "HISTORY OF THE WORLD"
+	title_label = Label.new()
+	var title := title_label
 	title.add_theme_font_size_override("font_size", 56)
 	title.add_theme_color_override("font_color", Color(0.9, 0.85, 0.6))
 	title.position = Vector2(60, 40)
 	add_child(title)
 
-	var subtitle := Label.new()
-	subtitle.text = "Geopolitical simulator across the ages"
+	subtitle_label = Label.new()
+	var subtitle := subtitle_label
 	subtitle.add_theme_font_size_override("font_size", 22)
 	subtitle.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
 	subtitle.position = Vector2(64, 110)
 	add_child(subtitle)
 
 	# Era selector
-	var era_label := Label.new()
-	era_label.text = "ERA"
+	era_section_label = Label.new()
+	var era_label := era_section_label
 	era_label.add_theme_font_size_override("font_size", 22)
 	era_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.4))
 	era_label.position = Vector2(60, 180)
@@ -57,8 +64,8 @@ func _ready() -> void:
 		era_buttons.append(btn)
 
 	# Country grid
-	var c_label := Label.new()
-	c_label.text = "PLAYABLE NATION"
+	country_section_label = Label.new()
+	var c_label := country_section_label
 	c_label.add_theme_font_size_override("font_size", 22)
 	c_label.add_theme_color_override("font_color", Color(0.9, 0.7, 0.4))
 	c_label.position = Vector2(60, 300)
@@ -95,22 +102,57 @@ func _ready() -> void:
 
 	# Start
 	start_button = Button.new()
-	start_button.text = "BEGIN CAMPAIGN"
 	start_button.add_theme_font_size_override("font_size", 26)
 	start_button.position = Vector2(60, 760)
 	start_button.size = Vector2(360, 80)
 	start_button.pressed.connect(_on_start)
 	add_child(start_button)
 
-	var hint := Label.new()
-	hint.text = "Controls: WASD/arrows = pan, wheel = zoom, click province, right-click = move/sail, Space = pause, +/- = speed, F1 = diplomacy, F2 = court, F3 = tech, H = help, F5 = save, F9 = load"
+	hint_label = Label.new()
+	var hint := hint_label
 	hint.add_theme_font_size_override("font_size", 16)
 	hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
 	hint.position = Vector2(60, 850)
 	hint.size = Vector2(1480, 30)
 	add_child(hint)
 
+	# Language switcher (top-right).
+	lang_label = Label.new()
+	lang_label.add_theme_font_size_override("font_size", 18)
+	lang_label.add_theme_color_override("font_color", Color(0.85, 0.85, 0.6))
+	lang_label.position = Vector2(1300, 40)
+	add_child(lang_label)
+	var lang_row := HBoxContainer.new()
+	lang_row.position = Vector2(1300, 70)
+	lang_row.add_theme_constant_override("separation", 6)
+	add_child(lang_row)
+	for code in Locale.locale_codes():
+		var lb := Button.new()
+		lb.text = Locale.locale_label(code)
+		lb.custom_minimum_size = Vector2(110, 36)
+		var cap_code := String(code)
+		lb.pressed.connect(func(): Locale.set_locale(cap_code))
+		lang_row.add_child(lb)
+		lang_buttons.append(lb)
+	Locale.locale_changed.connect(func(_c): _apply_locale())
+	_apply_locale()
+
 	_select_era(selected_era)
+
+## Refreshes all visible labels using the active Locale.
+func _apply_locale() -> void:
+	title_label.text = Locale.t("MENU_TITLE")
+	subtitle_label.text = Locale.t("MENU_SUBTITLE")
+	era_section_label.text = Locale.t("MENU_ERA")
+	country_section_label.text = Locale.t("MENU_NATION")
+	start_button.text = Locale.t("MENU_BEGIN")
+	hint_label.text = Locale.t("MENU_HINT")
+	lang_label.text = Locale.t("MENU_LANG")
+	for i in range(era_buttons.size()):
+		var ek = ["antiquity", "medieval", "renaissance", "industrial", "modern"][i]
+		era_buttons[i].text = Locale.t("ERA_" + ek.to_upper())
+	if selected_country != "":
+		_on_country_selected(selected_country)
 
 func _on_era_selected(era_id: String) -> void:
 	_select_era(era_id)

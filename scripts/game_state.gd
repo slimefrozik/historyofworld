@@ -30,6 +30,7 @@ var countries_db: Dictionary = {}
 var eras_db: Dictionary = {}
 var regions_db: Dictionary = {}
 var names_db: Dictionary = {}
+var buildings_db: Dictionary = {}
 
 var player_country_id: String = ""
 var current_era: String = "antiquity"
@@ -58,6 +59,7 @@ func _load_data() -> void:
 	eras_db = _read_json("res://data/eras.json")
 	regions_db = _read_json("res://data/regions.json")
 	names_db = _read_json("res://data/names.json")
+	buildings_db = _read_json("res://data/buildings.json")
 
 func _read_json(path: String) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)

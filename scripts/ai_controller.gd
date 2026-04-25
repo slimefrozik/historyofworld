@@ -41,10 +41,13 @@ func _ai_pick_research(c: Country) -> void:
 	c.current_research = String(available[0])
 
 func _ai_recruit(c: Country) -> void:
-	# Find latest unlocked unit.
+	# Find latest unlocked LAND unit. AI recruits at its land capital, so naval
+	# types must be excluded — they would otherwise spawn on land and get stuck.
 	var best_type := "levy"
 	for uid in GameState.unit_types.keys():
 		var ut: Dictionary = GameState.unit_types[uid]
+		if bool(ut.get("naval", false)):
+			continue
 		var req := String(ut.get("tech", ""))
 		if req == "" or c.researched_techs.has(req):
 			best_type = uid
@@ -85,10 +88,21 @@ func _ai_move_units(c: Country) -> void:
 					break
 		if moved:
 			continue
-		# Else: idle / move toward capital occasionally
+		# Else: idle / patrol to a random *passable* neighbour. Filter by
+		# unit type so land units don't wander into the sea and naval units
+		# don't crawl onto land.
 		if GameState.rng.randf() < 0.05 and u.province_id != c.capital_id:
-			if current.neighbors.size() > 0:
-				var step: int = current.neighbors[0]
+			var ut: Dictionary = GameState.unit_types.get(u.type_id, {})
+			var is_naval: bool = bool(ut.get("naval", false))
+			var candidates: Array[int] = []
+			for nid in current.neighbors:
+				var np: Province = GameState.provinces[int(nid)]
+				if np == null: continue
+				if is_naval and not np.is_sea: continue
+				if not is_naval and np.is_sea: continue
+				candidates.append(int(nid))
+			if not candidates.is_empty():
+				var step: int = candidates[GameState.rng.randi_range(0, candidates.size() - 1)]
 				_order_unit_move(u, step)
 
 func _order_unit_move(u: ArmyUnit, dest_id: int) -> void:

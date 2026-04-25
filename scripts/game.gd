@@ -18,18 +18,35 @@ var province_panel_recruit: Button
 var province_panel_recruit_navy: Button
 var province_panel_move_to: Button
 var province_panel_assign_general: Button
+var province_panel_convert_religion: Button
+var province_panel_convert_culture: Button
+var province_panel_close: Button
+var province_panel_build_btns: HBoxContainer
 
 var minimap_panel: PanelContainer
 var minimap_view: Control
 var help_panel: PanelContainer
+var help_panel_text: RichTextLabel
+var help_panel_close: Button
+var hotkey_hint: Label
 
 var diplomacy_panel: PanelContainer
 var diplomacy_list: VBoxContainer
+var diplomacy_title: Label
+var diplomacy_close: Button
 var character_panel: PanelContainer
 var character_text: RichTextLabel
+var character_title: Label
+var character_close: Button
 var tech_panel: PanelContainer
 var tech_list: VBoxContainer
+var tech_title: Label
+var tech_close: Button
 var save_panel: PanelContainer
+var save_title: Label
+var save_btn: Button
+var load_btn: Button
+var save_close: Button
 var event_log_label: RichTextLabel
 
 var hovered_province: int = -1
@@ -62,6 +79,8 @@ func _ready() -> void:
 	GameState.date_changed.connect(_on_date_changed)
 	GameState.selection_changed.connect(_on_selection_changed)
 	GameState.log_message.connect(_on_log_message)
+	Locale.locale_changed.connect(func(_c): _apply_locale())
+	_apply_locale()
 	_refresh_top_bar()
 	_refresh_event_log()
 
@@ -106,7 +125,8 @@ func _build_ui() -> void:
 
 	# Right-side hint hotkeys
 	var hk := Label.new()
-	hk.text = "D=Diplo  T=Tech  C=Chars  F5=Save  F9=Load"
+	hotkey_hint = hk
+	hk.text = _hotkey_hint_text()
 	hk.add_theme_font_size_override("font_size", 13)
 	hk.add_theme_color_override("font_color", Color(0.65, 0.7, 0.85))
 	hk.position = Vector2(1180, 18)
@@ -144,25 +164,29 @@ func _build_ui() -> void:
 	province_panel_text.custom_minimum_size = Vector2(330, 240)
 	pvb.add_child(province_panel_text)
 	province_panel_recruit = Button.new()
-	province_panel_recruit.text = "Recruit Army (cost varies)"
 	province_panel_recruit.pressed.connect(_on_recruit_pressed)
 	pvb.add_child(province_panel_recruit)
 	province_panel_recruit_navy = Button.new()
-	province_panel_recruit_navy.text = "Build Fleet"
 	province_panel_recruit_navy.pressed.connect(_on_recruit_navy_pressed)
 	pvb.add_child(province_panel_recruit_navy)
+	province_panel_build_btns = HBoxContainer.new()
+	province_panel_build_btns.add_theme_constant_override("separation", 4)
+	pvb.add_child(province_panel_build_btns)
+	province_panel_convert_religion = Button.new()
+	province_panel_convert_religion.pressed.connect(_on_convert_religion_pressed)
+	pvb.add_child(province_panel_convert_religion)
+	province_panel_convert_culture = Button.new()
+	province_panel_convert_culture.pressed.connect(_on_convert_culture_pressed)
+	pvb.add_child(province_panel_convert_culture)
 	province_panel_move_to = Button.new()
-	province_panel_move_to.text = "Move selected army here"
 	province_panel_move_to.pressed.connect(_on_move_to_pressed)
 	pvb.add_child(province_panel_move_to)
 	province_panel_assign_general = Button.new()
-	province_panel_assign_general.text = "Assign General to selected army"
 	province_panel_assign_general.pressed.connect(_on_assign_general_pressed)
 	pvb.add_child(province_panel_assign_general)
-	var close_btn := Button.new()
-	close_btn.text = "Close"
-	close_btn.pressed.connect(_close_province_panel)
-	pvb.add_child(close_btn)
+	province_panel_close = Button.new()
+	province_panel_close.pressed.connect(_close_province_panel)
+	pvb.add_child(province_panel_close)
 
 	# Diplomacy panel
 	diplomacy_panel = _build_panel(Vector2(420, 70), Vector2(900, 700))
@@ -175,7 +199,8 @@ func _build_ui() -> void:
 	diplomacy_panel.add_child(dpm)
 	var dpv := VBoxContainer.new()
 	dpm.add_child(dpv)
-	var dh := Label.new()
+	diplomacy_title = Label.new()
+	var dh := diplomacy_title
 	dh.text = "DIPLOMACY"
 	dh.add_theme_font_size_override("font_size", 24)
 	dh.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
@@ -186,8 +211,8 @@ func _build_ui() -> void:
 	diplomacy_list = VBoxContainer.new()
 	diplomacy_list.add_theme_constant_override("separation", 6)
 	scroll.add_child(diplomacy_list)
-	var d_close := Button.new()
-	d_close.text = "Close (D)"
+	diplomacy_close = Button.new()
+	var d_close := diplomacy_close
 	d_close.pressed.connect(func(): diplomacy_panel.visible = false)
 	dpv.add_child(d_close)
 
@@ -202,7 +227,8 @@ func _build_ui() -> void:
 	character_panel.add_child(cpm)
 	var cvb := VBoxContainer.new()
 	cpm.add_child(cvb)
-	var ch := Label.new()
+	character_title = Label.new()
+	var ch := character_title
 	ch.text = "COURT & MILITARY"
 	ch.add_theme_font_size_override("font_size", 24)
 	ch.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
@@ -213,8 +239,8 @@ func _build_ui() -> void:
 	character_text.custom_minimum_size = Vector2(870, 580)
 	character_text.scroll_active = true
 	cvb.add_child(character_text)
-	var c_close := Button.new()
-	c_close.text = "Close (C)"
+	character_close = Button.new()
+	var c_close := character_close
 	c_close.pressed.connect(func(): character_panel.visible = false)
 	cvb.add_child(c_close)
 
@@ -229,7 +255,8 @@ func _build_ui() -> void:
 	tech_panel.add_child(tpm)
 	var tvb := VBoxContainer.new()
 	tpm.add_child(tvb)
-	var th := Label.new()
+	tech_title = Label.new()
+	var th := tech_title
 	th.text = "TECHNOLOGY"
 	th.add_theme_font_size_override("font_size", 24)
 	th.add_theme_color_override("font_color", Color(0.95, 0.85, 0.5))
@@ -240,8 +267,8 @@ func _build_ui() -> void:
 	tech_list = VBoxContainer.new()
 	tech_list.add_theme_constant_override("separation", 4)
 	t_scroll.add_child(tech_list)
-	var t_close := Button.new()
-	t_close.text = "Close (T)"
+	tech_close = Button.new()
+	var t_close := tech_close
 	t_close.pressed.connect(func(): tech_panel.visible = false)
 	tvb.add_child(t_close)
 
@@ -256,23 +283,21 @@ func _build_ui() -> void:
 	save_panel.add_child(spm)
 	var spv := VBoxContainer.new()
 	spm.add_child(spv)
-	var slbl := Label.new()
+	save_title = Label.new()
+	var slbl := save_title
 	slbl.text = "Save / Load"
 	slbl.add_theme_font_size_override("font_size", 22)
 	slbl.add_theme_color_override("font_color", Color(0.9, 0.85, 0.5))
 	spv.add_child(slbl)
-	var save_btn := Button.new()
-	save_btn.text = "Save (slot 'main')  [F5]"
+	save_btn = Button.new()
 	save_btn.pressed.connect(func(): SaveLoad.save("main"); save_panel.visible = false)
 	spv.add_child(save_btn)
-	var load_btn := Button.new()
-	load_btn.text = "Load (slot 'main')  [F9]"
+	load_btn = Button.new()
 	load_btn.pressed.connect(_on_load_pressed)
 	spv.add_child(load_btn)
-	var sp_close := Button.new()
-	sp_close.text = "Close"
-	sp_close.pressed.connect(func(): save_panel.visible = false)
-	spv.add_child(sp_close)
+	save_close = Button.new()
+	save_close.pressed.connect(func(): save_panel.visible = false)
+	spv.add_child(save_close)
 
 	# Event log (bottom-right)
 	var log_panel := PanelContainer.new()
@@ -395,19 +420,23 @@ func _refresh_top_bar() -> void:
 	for pid in c.province_ids:
 		income_estimate += GameState.provinces[pid].base_tax()
 	top_bar_label.text = "[b][color=#f1c40f]%s[/color][/b]   " % c.name
-	top_bar_label.text += "[color=#f1c40f]Gold[/color]: %d (%+.1f/m)   " % [int(c.gold), income_estimate]
-	top_bar_label.text += "[color=#e74c3c]Manpower[/color]: %d   " % int(c.manpower_pool)
-	top_bar_label.text += "[color=#3498db]Research[/color]: %d   " % int(c.research_points)
-	top_bar_label.text += "[color=#9b59b6]Culture[/color]: %d   " % int(c.culture_points)
-	top_bar_label.text += "[color=#2ecc71]Stability[/color]: %.1f   " % c.stability
-	top_bar_label.text += "[color=#f39c12]Prestige[/color]: %d   " % int(c.prestige)
-	top_bar_label.text += "Provinces: %d   Armies: %d" % [c.province_ids.size(), c.unit_ids.size()]
+	top_bar_label.text += "[color=#f1c40f]%s[/color]: %d (%+.1f/m)   " % [Locale.t("TOP_GOLD"), int(c.gold), income_estimate]
+	top_bar_label.text += "[color=#e74c3c]%s[/color]: %d   " % [Locale.t("TOP_MANPOWER"), int(c.manpower_pool)]
+	top_bar_label.text += "[color=#3498db]%s[/color]: %d   " % [Locale.t("TOP_RESEARCH"), int(c.research_points)]
+	top_bar_label.text += "[color=#9b59b6]%s[/color]: %d   " % [Locale.t("TOP_CULTURE_PT"), int(c.culture_points)]
+	top_bar_label.text += "[color=#2ecc71]%s[/color]: %.1f   " % [Locale.t("TOP_STABILITY"), c.stability]
+	top_bar_label.text += "[color=#f39c12]%s[/color]: %d   " % [Locale.t("TOP_PRESTIGE"), int(c.prestige)]
+	# Religious + cultural unity (% of own provinces matching state religion / culture)
+	var ru: float = _religious_unity(c)
+	var cu: float = _cultural_unity(c)
+	top_bar_label.text += "[color=#e8c39a]%s[/color]: %d%%   " % [Locale.t("TOP_RELIGIOUS_UNITY"), int(round(ru * 100.0))]
+	top_bar_label.text += "[color=#e8c39a]%s[/color]: %d%%" % [Locale.t("TOP_CULTURAL_UNITY"), int(round(cu * 100.0))]
 	date_label.text = GameState.date_string()
 	if GameState.paused:
-		pause_label.text = "[ PAUSED ]"
+		pause_label.text = "[ %s ]" % Locale.t("TOP_PAUSED")
 		pause_label.add_theme_color_override("font_color", Color(1.0, 0.7, 0.4))
 	else:
-		pause_label.text = ">> Speed %d" % GameState.speed
+		pause_label.text = ">> %s %d" % [Locale.t("TOP_SPEED"), GameState.speed]
 		pause_label.add_theme_color_override("font_color", Color(0.6, 0.95, 0.6))
 
 func _refresh_province_panel() -> void:
@@ -417,7 +446,7 @@ func _refresh_province_panel() -> void:
 		return
 	var p: Province = GameState.get_province(pid)
 	if p == null: return
-	var owner_name := "Unclaimed"
+	var owner_name := Locale.t("PANEL_UNCLAIMED")
 	var owner_color := "#888888"
 	if p.owner_id != "":
 		var oc: Country = GameState.countries.get(p.owner_id)
@@ -426,15 +455,37 @@ func _refresh_province_panel() -> void:
 			owner_color = "#%02x%02x%02x" % [int(oc.color.r * 255), int(oc.color.g * 255), int(oc.color.b * 255)]
 	var t := "[b][color=#f1c40f]%s[/color][/b]" % p.name
 	if p.is_capital:
-		t += "  [color=#f4d35e]★ Capital[/color]"
+		t += "  [color=#f4d35e]★ %s[/color]" % Locale.t("PANEL_CAPITAL")
 	t += "\n"
 	t += "[color=%s]%s[/color]\n" % [owner_color, owner_name]
-	t += "Terrain: %s\n" % p.terrain_name()
-	t += "Development: [b]%d[/b]\n" % p.development
-	t += "Population: %d\n" % p.population
-	t += "Culture: %s\n" % p.culture
-	t += "Religion: %s\n" % p.religion
-	t += "Garrison: %d   Unrest: %.1f\n" % [p.garrison, p.unrest]
+	t += "%s: %s\n" % [Locale.t("PANEL_TERRAIN"), _terrain_name(p)]
+	if not p.is_sea:
+		t += "%s: [b]%d[/b]    %s: %d\n" % [Locale.t("PANEL_DEVELOPMENT"), p.development, Locale.t("PANEL_POPULATION"), p.population]
+		t += "%s: %s    %s: %s\n" % [Locale.t("PANEL_CULTURE"), p.culture, Locale.t("PANEL_RELIGION"), p.religion]
+		var res_label := Locale.t("RESOURCE_NONE") if p.resource == "" else _resource_label(p.resource)
+		t += "%s: [color=#e0c080]%s[/color]\n" % [Locale.t("PANEL_RESOURCE"), res_label]
+		t += "%s: %d   %s: %.1f\n" % [Locale.t("PANEL_GARRISON"), p.garrison, Locale.t("PANEL_UNREST"), p.unrest]
+		# Buildings
+		var bld_text := ""
+		if p.buildings.size() > 0:
+			var parts: Array[String] = []
+			for b_id in p.buildings:
+				parts.append(_building_name(b_id))
+			bld_text = ", ".join(parts)
+		else:
+			bld_text = Locale.t("PANEL_BUILDINGS_NONE")
+		t += "%s: %s\n" % [Locale.t("PANEL_BUILDINGS"), bld_text]
+		# Active building
+		if p.build_id != "":
+			var bdef: Dictionary = GameState.buildings_db.get(p.build_id, {})
+			var months: int = int(bdef.get("build_months", 1))
+			var pct: int = int(round((p.build_progress_months / max(1.0, float(months))) * 100.0))
+			t += "[color=#a0c0ff]%s: %s[/color]\n" % [Locale.t("PANEL_BUILDING_AT"), Locale.t("PANEL_BUILDING_IN_PROGRESS") % [_building_name(p.build_id), pct]]
+		# Active conversions
+		if p.convert_religion_to != "":
+			t += "[color=#d0a0e8]→ %s (%d mo)[/color]\n" % [p.convert_religion_to, int(p.convert_religion_months)]
+		if p.convert_culture_to != "":
+			t += "[color=#a0e8d0]→ %s (%d mo)[/color]\n" % [p.convert_culture_to, int(p.convert_culture_months)]
 	# Units in province
 	var present_units := []
 	for uid in GameState.units.keys():
@@ -442,12 +493,12 @@ func _refresh_province_panel() -> void:
 		if u.province_id == pid:
 			present_units.append(u)
 	if present_units.size() > 0:
-		t += "\n[b]Armies present:[/b]\n"
+		t += "\n[b]%s:[/b]\n" % Locale.t("PANEL_ARMIES_PRESENT")
 		for u in present_units:
-			var oc: Country = GameState.countries.get(u.owner_id)
+			var oc2: Country = GameState.countries.get(u.owner_id)
 			var ut: Dictionary = GameState.unit_types.get(u.type_id, {})
-			var o_color: String = "#%02x%02x%02x" % [int(oc.color.r * 255), int(oc.color.g * 255), int(oc.color.b * 255)] if oc != null else "#888888"
-			t += "  • [color=%s]%s[/color] %s (str %d, mor %.1f)\n" % [o_color, oc.name if oc != null else u.owner_id, ut.get("name", u.type_id), u.strength, u.morale]
+			var o_color: String = "#%02x%02x%02x" % [int(oc2.color.r * 255), int(oc2.color.g * 255), int(oc2.color.b * 255)] if oc2 != null else "#888888"
+			t += "  • [color=%s]%s[/color] %s (str %d, mor %.1f)\n" % [o_color, oc2.name if oc2 != null else u.owner_id, ut.get("name", u.type_id), u.strength, u.morale]
 	province_panel_text.text = t
 
 	# Buttons enabled depending on selection
@@ -457,6 +508,11 @@ func _refresh_province_panel() -> void:
 	province_panel_recruit_navy.visible = owns_province and p.is_coast
 	province_panel_move_to.visible = move_mode_unit != -1
 	province_panel_assign_general.visible = move_mode_unit != -1 and pc != null and pc.general_ids.size() > 0
+	# Conversion / culture buttons.
+	province_panel_convert_religion.visible = owns_province and not p.is_sea and pc != null and p.religion != pc.state_religion
+	province_panel_convert_culture.visible = owns_province and not p.is_sea and pc != null and p.culture != pc.primary_culture
+	# Building buttons.
+	_rebuild_building_buttons(p, owns_province)
 
 func _refresh_event_log() -> void:
 	if event_log_label == null:
@@ -491,52 +547,52 @@ func _refresh_diplomacy() -> void:
 		hb.add_theme_constant_override("separation", 8)
 		row.add_child(hb)
 		var rel := GameState.relations_score(pc.id, cid)
-		var status := "NEUTRAL"
-		if pc.at_war_with.has(cid): status = "WAR"
-		elif pc.allies.has(cid): status = "ALLY"
+		var status := Locale.t("DIPLO_NEUTRAL")
+		if pc.at_war_with.has(cid): status = Locale.t("DIPLO_AT_WAR")
+		elif pc.allies.has(cid): status = Locale.t("DIPLO_ALLIED")
 		var lbl := RichTextLabel.new()
 		lbl.bbcode_enabled = true
 		lbl.fit_content = true
 		lbl.scroll_active = false
 		lbl.custom_minimum_size = Vector2(360, 50)
 		var rel_color := "#2ecc71" if rel > 30 else ("#e74c3c" if rel < -30 else "#cccccc")
-		lbl.text = "[b]%s[/b]  [color=#aaaaaa](%s)[/color]\n[color=%s]Relations: %+d[/color]   [color=#cccccc]Status: %s[/color]" % [oc.name, oc.era.capitalize(), rel_color, rel, status]
+		lbl.text = "[b]%s[/b]  [color=#aaaaaa](%s)[/color]\n[color=%s]%s: %+d[/color]   [color=#cccccc]%s: %s[/color]" % [oc.name, oc.era.capitalize(), rel_color, Locale.t("DIPLO_RELATIONS"), rel, Locale.t("DIPLO_STATUS"), status]
 		hb.add_child(lbl)
 		# Action buttons
 		var b_imp := Button.new()
-		b_imp.text = "Improve (-30g)"
+		b_imp.text = "%s (-30g)" % Locale.t("DIPLO_IMPROVE")
 		b_imp.pressed.connect(func(): AI.improve_relations(pc.id, cid); _refresh_diplomacy(); _refresh_top_bar())
 		hb.add_child(b_imp)
 		var b_gift := Button.new()
-		b_gift.text = "Gift (-100g)"
+		b_gift.text = Locale.t("DIPLO_GIFT")
 		b_gift.pressed.connect(_on_gift.bind(cid))
 		hb.add_child(b_gift)
 		if pc.at_war_with.has(cid):
 			var b_peace := Button.new()
-			b_peace.text = "Make Peace"
+			b_peace.text = Locale.t("DIPLO_MAKE_PEACE")
 			b_peace.pressed.connect(func(): AI.make_peace(pc.id, cid); _refresh_diplomacy(); _refresh_top_bar())
 			hb.add_child(b_peace)
 		else:
 			var b_war := Button.new()
-			b_war.text = "Declare War"
+			b_war.text = Locale.t("DIPLO_DECLARE_WAR")
 			b_war.pressed.connect(func(): AI.declare_war(pc.id, cid); _refresh_diplomacy(); _refresh_top_bar())
 			hb.add_child(b_war)
 		if pc.allies.has(cid):
 			var b_break := Button.new()
-			b_break.text = "Break Alliance"
+			b_break.text = Locale.t("DIPLO_BREAK_ALLIANCE")
 			b_break.pressed.connect(func(): AI.break_alliance(pc.id, cid); _refresh_diplomacy(); _refresh_top_bar())
 			hb.add_child(b_break)
 		elif not pc.at_war_with.has(cid):
 			var b_ally := Button.new()
-			b_ally.text = "Form Alliance"
+			b_ally.text = Locale.t("DIPLO_FORM_ALLIANCE")
 			b_ally.pressed.connect(func(): AI.form_alliance(pc.id, cid); _refresh_diplomacy(); _refresh_top_bar())
 			hb.add_child(b_ally)
 		var b_spy := Button.new()
-		b_spy.text = "Spy (-60g)"
+		b_spy.text = Locale.t("DIPLO_SPY")
 		b_spy.pressed.connect(func(): AI.send_spy(pc.id, cid); _refresh_diplomacy(); _refresh_top_bar())
 		hb.add_child(b_spy)
 		var b_kill := Button.new()
-		b_kill.text = "Assassinate (-150g)"
+		b_kill.text = Locale.t("DIPLO_ASSASSIN")
 		b_kill.pressed.connect(func(): AI.attempt_assassination(pc.id, cid); _refresh_diplomacy(); _refresh_top_bar())
 		hb.add_child(b_kill)
 
@@ -925,49 +981,232 @@ func _minimap_jump(pos: Vector2) -> void:
 func _build_help_panel() -> void:
 	help_panel = _build_panel(Vector2(440, 180), Vector2(560, 540))
 	help_panel.visible = false
-	var hvb := VBoxContainer.new()
-	hvb.add_theme_constant_override("separation", 6)
-	help_panel.add_child(hvb)
 	var hm := MarginContainer.new()
 	hm.add_theme_constant_override("margin_top", 16)
 	hm.add_theme_constant_override("margin_left", 18)
 	hm.add_theme_constant_override("margin_right", 18)
 	hm.add_theme_constant_override("margin_bottom", 16)
 	help_panel.add_child(hm)
-	var rt := RichTextLabel.new()
-	rt.bbcode_enabled = true
-	rt.fit_content = true
-	rt.custom_minimum_size = Vector2(520, 480)
-	rt.text = "[b][color=#f1c40f]History of the World — Hotkeys[/color][/b]\n\n" \
-		+ "[b]Camera[/b]\n" \
-		+ "  [color=#aae]W A S D[/color] / Arrow keys — pan\n" \
-		+ "  [color=#aae]Mouse wheel[/color] — zoom\n" \
-		+ "  [color=#aae]Click minimap[/color] (top-left) — jump camera\n\n" \
-		+ "[b]Time[/b]\n" \
-		+ "  [color=#aae]Space[/color] — pause / resume\n" \
-		+ "  [color=#aae]+ / -[/color]   — speed up / slow down\n\n" \
-		+ "[b]Panels[/b]\n" \
-		+ "  [color=#aae]F1[/color] — diplomacy\n" \
-		+ "  [color=#aae]F2[/color] — characters / court\n" \
-		+ "  [color=#aae]F3[/color] — tech tree\n" \
-		+ "  [color=#aae]H[/color]  — this help screen\n" \
-		+ "  [color=#aae]Esc[/color] — close all panels\n\n" \
-		+ "[b]Units[/b]\n" \
-		+ "  [color=#aae]Click army[/color] (circle/diamond) — select\n" \
-		+ "  [color=#aae]Right-click province[/color] — march/sail there (multi-hop pathfinding)\n" \
-		+ "  Province panel — Recruit Army (land), Build Fleet (coastal), Assign General\n" \
-		+ "  Round = land army, Diamond = fleet, Gold pip = led by a general\n\n" \
-		+ "[b]Save / Load[/b]\n" \
-		+ "  [color=#aae]F5[/color] — save\n" \
-		+ "  [color=#aae]F9[/color] — load\n"
-	hm.add_child(rt)
-	var close_btn := Button.new()
-	close_btn.text = "Close (H)"
-	close_btn.pressed.connect(func(): help_panel.visible = false)
-	hm.add_child(close_btn)
-	ui_layer.add_child(help_panel)
+	var hvb := VBoxContainer.new()
+	hvb.add_theme_constant_override("separation", 6)
+	hm.add_child(hvb)
+	help_panel_text = RichTextLabel.new()
+	help_panel_text.bbcode_enabled = true
+	help_panel_text.fit_content = true
+	help_panel_text.custom_minimum_size = Vector2(520, 480)
+	hvb.add_child(help_panel_text)
+	help_panel_close = Button.new()
+	help_panel_close.pressed.connect(func(): help_panel.visible = false)
+	hvb.add_child(help_panel_close)
+	# Note: help_panel is already parented to ui_layer by _build_panel().
+
+func _help_panel_text() -> String:
+	return "[b][color=#f1c40f]%s[/color][/b]\n\n" % Locale.t("HELP_TITLE") \
+		+ "[b]%s[/b]\n" % Locale.t("HELP_CAMERA") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_PAN") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_ZOOM") \
+		+ "  [color=#aae]%s[/color]\n\n" % Locale.t("HELP_MINIMAP") \
+		+ "[b]%s[/b]\n" % Locale.t("HELP_TIME") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_PAUSE") \
+		+ "  [color=#aae]%s[/color]\n\n" % Locale.t("HELP_SPEED") \
+		+ "[b]%s[/b]\n" % Locale.t("HELP_PANELS") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_F1") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_F2") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_F3") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_H") \
+		+ "  [color=#aae]%s[/color]\n\n" % Locale.t("HELP_ESC") \
+		+ "[b]%s[/b]\n" % Locale.t("HELP_UNITS") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_SELECT") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_RIGHT_CLICK") \
+		+ "  %s\n" % Locale.t("HELP_PROVINCE_PANEL") \
+		+ "  %s\n\n" % Locale.t("HELP_TOKENS") \
+		+ "[b]%s[/b]\n" % Locale.t("HELP_SAVELOAD") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_SAVE") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_LOAD")
+
+func _hotkey_hint_text() -> String:
+	return "F1=%s  F2=%s  F3=%s  H=?  F5=Save  F9=Load" % [Locale.t("DIPLO_TITLE"), Locale.t("COURT_TITLE"), Locale.t("TECH_TITLE")]
+
+func _apply_locale() -> void:
+	if hotkey_hint != null:
+		hotkey_hint.text = _hotkey_hint_text()
+	if help_panel_text != null:
+		help_panel_text.text = _help_panel_text()
+	if help_panel_close != null:
+		help_panel_close.text = Locale.t("HELP_CLOSE")
+	if province_panel_recruit != null:
+		province_panel_recruit.text = Locale.t("PANEL_RECRUIT_LAND")
+		province_panel_recruit_navy.text = Locale.t("PANEL_RECRUIT_NAVY")
+		province_panel_move_to.text = Locale.t("PANEL_MOVE_HERE")
+		province_panel_assign_general.text = Locale.t("PANEL_ASSIGN_GENERAL")
+		province_panel_convert_religion.text = Locale.t("PANEL_CONVERT_RELIGION")
+		province_panel_convert_culture.text = Locale.t("PANEL_CULTIVATE_CULTURE")
+		province_panel_close.text = Locale.t("PANEL_CLOSE")
+	if diplomacy_title != null:
+		diplomacy_title.text = Locale.t("DIPLO_TITLE").to_upper()
+		diplomacy_close.text = "%s (F1)" % Locale.t("PANEL_CLOSE")
+	if character_title != null:
+		character_title.text = Locale.t("COURT_TITLE").to_upper()
+		character_close.text = "%s (F2)" % Locale.t("PANEL_CLOSE")
+	if tech_title != null:
+		tech_title.text = Locale.t("TECH_TITLE").to_upper()
+		tech_close.text = "%s (F3)" % Locale.t("PANEL_CLOSE")
+	if save_title != null:
+		save_title.text = Locale.t("ACT_SAVELOAD")
+		save_btn.text = "%s [F5]" % Locale.t("ACT_SAVE")
+		load_btn.text = "%s [F9]" % Locale.t("ACT_LOAD")
+		save_close.text = Locale.t("PANEL_CLOSE")
+	# Re-render dynamic panels that may already be open.
+	_refresh_top_bar()
+	if province_panel != null and province_panel.visible:
+		_refresh_province_panel()
+	if diplomacy_panel != null and diplomacy_panel.visible:
+		_refresh_diplomacy()
+	if character_panel != null and character_panel.visible:
+		_refresh_characters()
+	if tech_panel != null and tech_panel.visible:
+		_refresh_tech()
 
 func _toggle_help_panel() -> void:
 	if help_panel == null:
 		return
 	help_panel.visible = not help_panel.visible
+
+# ---------- HELPERS: i18n labels ----------
+
+const _TERRAIN_KEYS := [
+	"TERR_PLAINS", "TERR_FOREST", "TERR_HILLS", "TERR_MOUNTAINS", "TERR_DESERT",
+	"TERR_STEPPE", "TERR_JUNGLE", "TERR_TUNDRA", "TERR_COAST", "TERR_SEA",
+]
+
+func _terrain_name(p: Province) -> String:
+	var idx: int = clamp(p.terrain, 0, _TERRAIN_KEYS.size() - 1)
+	return Locale.t(_TERRAIN_KEYS[idx])
+
+func _resource_label(rid: String) -> String:
+	var key := "RESOURCE_" + rid.to_upper()
+	return Locale.t(key)
+
+func _building_name(bid: String) -> String:
+	var bdef: Dictionary = GameState.buildings_db.get(bid, {})
+	var k := String(bdef.get("name_key", ""))
+	if k == "": return bid.capitalize()
+	return Locale.t(k)
+
+func _building_desc(bid: String) -> String:
+	var bdef: Dictionary = GameState.buildings_db.get(bid, {})
+	var k := String(bdef.get("desc_key", ""))
+	if k == "": return ""
+	return Locale.t(k)
+
+# ---------- HELPERS: religion / culture stats ----------
+
+## Returns 0..1 share of country provinces matching the state religion.
+func _religious_unity(c: Country) -> float:
+	if c == null or c.province_ids.is_empty(): return 1.0
+	var match_count: int = 0
+	for pid in c.province_ids:
+		var p: Province = GameState.provinces[int(pid)]
+		if p != null and not p.is_sea and p.religion == c.state_religion:
+			match_count += 1
+	return float(match_count) / float(c.province_ids.size())
+
+func _cultural_unity(c: Country) -> float:
+	if c == null or c.province_ids.is_empty(): return 1.0
+	var match_count: int = 0
+	for pid in c.province_ids:
+		var p: Province = GameState.provinces[int(pid)]
+		if p != null and not p.is_sea and p.culture == c.primary_culture:
+			match_count += 1
+	return float(match_count) / float(c.province_ids.size())
+
+# ---------- BUILDING / CONVERSION ACTIONS ----------
+
+const CONVERT_GOLD_COST := 75
+const CULTURE_GOLD_COST := 50
+const CONVERT_DURATION_MONTHS := 12.0
+const CULTURE_DURATION_MONTHS := 36.0
+
+## Rebuilds the row of "Build X" buttons under the province panel based on
+## which buildings the player can construct in this province.
+func _rebuild_building_buttons(p: Province, owns_province: bool) -> void:
+	if province_panel_build_btns == null:
+		return
+	for child in province_panel_build_btns.get_children():
+		child.queue_free()
+	province_panel_build_btns.visible = owns_province and not p.is_sea and p.build_id == ""
+	if not province_panel_build_btns.visible:
+		return
+	for bid in GameState.buildings_db.keys():
+		var bdef: Dictionary = GameState.buildings_db[bid]
+		if p.buildings.has(bid):
+			continue
+		if bool(bdef.get("needs_coast", false)) and not p.is_coast:
+			continue
+		var b := Button.new()
+		b.text = "%s: %s (%dг)" % [Locale.t("PANEL_BUILD_BUILDING"), _building_name(bid), int(bdef.get("cost_gold", 0))]
+		b.tooltip_text = _building_desc(bid)
+		var cap_bid := String(bid)
+		var cap_p := p
+		b.pressed.connect(func(): _on_build_pressed(cap_p, cap_bid))
+		province_panel_build_btns.add_child(b)
+
+func _on_build_pressed(p: Province, bid: String) -> void:
+	var pc: Country = GameState.countries.get(GameState.player_country_id)
+	if pc == null: return
+	if not pc.province_ids.has(p.id): return
+	if p.build_id != "": return
+	if p.buildings.has(bid): return
+	var bdef: Dictionary = GameState.buildings_db.get(bid, {})
+	var cost: float = float(bdef.get("cost_gold", 0))
+	if pc.gold < cost:
+		GameState.log_event(Locale.t("EVT_BUILDING_CANT_AFFORD") % _building_name(bid), Color(1.0, 0.7, 0.5))
+		return
+	pc.gold -= cost
+	p.build_id = bid
+	p.build_progress_months = 0.0
+	GameState.log_event(Locale.t("EVT_BUILDING_START") % [_building_name(bid), p.name], Color(0.7, 0.9, 1.0))
+	_refresh_top_bar()
+	_refresh_province_panel()
+
+func _on_convert_religion_pressed() -> void:
+	var pid := GameState.selected_province_id
+	if pid < 0: return
+	var p: Province = GameState.provinces[pid]
+	var pc: Country = GameState.countries.get(GameState.player_country_id)
+	if p == null or pc == null: return
+	if not pc.province_ids.has(pid): return
+	if p.religion == pc.state_religion: return
+	if p.convert_religion_to != "":
+		GameState.log_event(Locale.t("EVT_CONVERT_BUSY"), Color(1.0, 0.7, 0.5))
+		return
+	if pc.gold < CONVERT_GOLD_COST:
+		GameState.log_event(Locale.t("EVT_NOT_ENOUGH_GOLD"), Color(1.0, 0.6, 0.5))
+		return
+	pc.gold -= CONVERT_GOLD_COST
+	p.convert_religion_to = pc.state_religion
+	p.convert_religion_months = CONVERT_DURATION_MONTHS
+	GameState.log_event(Locale.t("EVT_CONVERT_START") % [p.name, int(CONVERT_DURATION_MONTHS)], Color(0.85, 0.7, 1.0))
+	_refresh_top_bar()
+	_refresh_province_panel()
+
+func _on_convert_culture_pressed() -> void:
+	var pid := GameState.selected_province_id
+	if pid < 0: return
+	var p: Province = GameState.provinces[pid]
+	var pc: Country = GameState.countries.get(GameState.player_country_id)
+	if p == null or pc == null: return
+	if not pc.province_ids.has(pid): return
+	if p.culture == pc.primary_culture: return
+	if p.convert_culture_to != "":
+		GameState.log_event(Locale.t("EVT_CULTURE_BUSY"), Color(1.0, 0.7, 0.5))
+		return
+	if pc.gold < CULTURE_GOLD_COST:
+		GameState.log_event(Locale.t("EVT_NOT_ENOUGH_GOLD"), Color(1.0, 0.6, 0.5))
+		return
+	pc.gold -= CULTURE_GOLD_COST
+	p.convert_culture_to = pc.primary_culture
+	p.convert_culture_months = CULTURE_DURATION_MONTHS
+	GameState.log_event(Locale.t("EVT_CONVERT_START") % [p.name, int(CULTURE_DURATION_MONTHS)], Color(0.7, 0.9, 0.95))
+	_refresh_top_bar()
+	_refresh_province_panel()
