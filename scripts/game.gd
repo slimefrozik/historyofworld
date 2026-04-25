@@ -353,16 +353,19 @@ func _build_panel(pos: Vector2, sz: Vector2) -> PanelContainer:
 
 # ---------- INPUT ----------
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
+	# Use _input (not _unhandled_input) so global hotkeys still fire even
+	# when a Button or panel has keyboard focus.
 	if event is InputEventKey and event.pressed and not event.echo:
+		var handled := true
 		match event.keycode:
 			KEY_SPACE:
 				GameState.paused = not GameState.paused
 				_refresh_top_bar()
-			KEY_EQUAL, KEY_PLUS:
+			KEY_EQUAL, KEY_PLUS, KEY_KP_ADD:
 				GameState.speed = min(5, GameState.speed + 1)
 				_refresh_top_bar()
-			KEY_MINUS:
+			KEY_MINUS, KEY_KP_SUBTRACT:
 				GameState.speed = max(1, GameState.speed - 1)
 				_refresh_top_bar()
 			KEY_F1:
@@ -389,7 +392,12 @@ func _unhandled_input(event: InputEvent) -> void:
 				character_panel.visible = false
 				tech_panel.visible = false
 				save_panel.visible = false
+				help_panel.visible = false
 				province_panel.visible = false
+			_:
+				handled = false
+		if handled:
+			get_viewport().set_input_as_handled()
 
 # ---------- SIGNAL HANDLERS ----------
 
@@ -1101,24 +1109,30 @@ func _building_desc(bid: String) -> String:
 
 # ---------- HELPERS: religion / culture stats ----------
 
-## Returns 0..1 share of country provinces matching the state religion.
+## Returns 0..1 share of land provinces matching the state religion.
 func _religious_unity(c: Country) -> float:
 	if c == null or c.province_ids.is_empty(): return 1.0
 	var match_count: int = 0
+	var land_count: int = 0
 	for pid in c.province_ids:
 		var p: Province = GameState.provinces[int(pid)]
-		if p != null and not p.is_sea and p.religion == c.state_religion:
+		if p == null or p.is_sea: continue
+		land_count += 1
+		if p.religion == c.state_religion:
 			match_count += 1
-	return float(match_count) / float(c.province_ids.size())
+	return 1.0 if land_count == 0 else float(match_count) / float(land_count)
 
 func _cultural_unity(c: Country) -> float:
 	if c == null or c.province_ids.is_empty(): return 1.0
 	var match_count: int = 0
+	var land_count: int = 0
 	for pid in c.province_ids:
 		var p: Province = GameState.provinces[int(pid)]
-		if p != null and not p.is_sea and p.culture == c.primary_culture:
+		if p == null or p.is_sea: continue
+		land_count += 1
+		if p.culture == c.primary_culture:
 			match_count += 1
-	return float(match_count) / float(c.province_ids.size())
+	return 1.0 if land_count == 0 else float(match_count) / float(land_count)
 
 # ---------- BUILDING / CONVERSION ACTIONS ----------
 
@@ -1144,7 +1158,7 @@ func _rebuild_building_buttons(p: Province, owns_province: bool) -> void:
 		if bool(bdef.get("needs_coast", false)) and not p.is_coast:
 			continue
 		var b := Button.new()
-		b.text = "%s: %s (%dг)" % [Locale.t("PANEL_BUILD_BUILDING"), _building_name(bid), int(bdef.get("cost_gold", 0))]
+		b.text = "%s: %s (%dg)" % [Locale.t("PANEL_BUILD_BUILDING"), _building_name(bid), int(bdef.get("cost_gold", 0))]
 		b.tooltip_text = _building_desc(bid)
 		var cap_bid := String(bid)
 		var cap_p := p
@@ -1207,6 +1221,6 @@ func _on_convert_culture_pressed() -> void:
 	pc.gold -= CULTURE_GOLD_COST
 	p.convert_culture_to = pc.primary_culture
 	p.convert_culture_months = CULTURE_DURATION_MONTHS
-	GameState.log_event(Locale.t("EVT_CONVERT_START") % [p.name, int(CULTURE_DURATION_MONTHS)], Color(0.7, 0.9, 0.95))
+	GameState.log_event(Locale.t("EVT_CULTURE_START") % [p.name, int(CULTURE_DURATION_MONTHS)], Color(0.7, 0.9, 0.95))
 	_refresh_top_bar()
 	_refresh_province_panel()

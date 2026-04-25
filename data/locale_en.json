@@ -164,6 +164,7 @@
   "EVT_BUILDING_START": "Began construction of %s in %s.",
   "EVT_BUILDING_CANT_AFFORD": "Cannot afford %s.",
   "EVT_CONVERT_START": "Missionary sent to %s (will convert in %d months).",
+  "EVT_CULTURE_START": "Cultural envoy sent to %s (will assimilate in %d months).",
   "EVT_CONVERT_DONE": "%s now follows the %s religion.",
   "EVT_CULTURE_DONE": "%s has assimilated to %s culture.",
   "EVT_CONVERT_BUSY": "A missionary is already working on this province.",
