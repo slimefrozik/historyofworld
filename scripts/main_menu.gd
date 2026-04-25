@@ -103,7 +103,7 @@ func _ready() -> void:
 	add_child(start_button)
 
 	var hint := Label.new()
-	hint.text = "Controls: WASD/arrows = pan camera, mouse wheel = zoom, click province to inspect, Space = pause, +/- = speed, D = diplomacy, T = tech, C = characters, F5 = save, F9 = load"
+	hint.text = "Controls: WASD/arrows = pan, wheel = zoom, click province, right-click = move/sail, Space = pause, +/- = speed, F1 = diplomacy, F2 = court, F3 = tech, H = help, F5 = save, F9 = load"
 	hint.add_theme_font_size_override("font_size", 16)
 	hint.add_theme_color_override("font_color", Color(0.7, 0.75, 0.85))
 	hint.position = Vector2(60, 850)

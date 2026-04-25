@@ -2,7 +2,7 @@
 class_name Province
 extends RefCounted
 
-enum Terrain { PLAINS, FOREST, HILLS, MOUNTAINS, DESERT, STEPPE, JUNGLE, TUNDRA, COAST }
+enum Terrain { PLAINS, FOREST, HILLS, MOUNTAINS, DESERT, STEPPE, JUNGLE, TUNDRA, COAST, SEA }
 
 var id: int = -1
 var name: String = ""
@@ -20,6 +20,8 @@ var garrison: int = 0
 var unrest: float = 0.0
 var neighbors: Array[int] = []
 var is_capital: bool = false
+var is_sea: bool = false # true = sea/ocean tile (only naval units can enter)
+var is_coast: bool = false # land province with at least one sea neighbour
 
 func base_tax() -> float:
 	return float(development) * 0.5
@@ -38,6 +40,7 @@ func terrain_name() -> String:
 		Terrain.JUNGLE: return "Jungle"
 		Terrain.TUNDRA: return "Tundra"
 		Terrain.COAST: return "Coast"
+		Terrain.SEA: return "Sea"
 	return "Unknown"
 
 func combat_bonus_for_defender() -> float:
@@ -55,6 +58,7 @@ func to_dict() -> Dictionary:
 		"development": development, "population": population, "culture": culture,
 		"religion": religion, "buildings": buildings, "garrison": garrison,
 		"unrest": unrest, "neighbors": neighbors, "is_capital": is_capital,
+		"is_sea": is_sea, "is_coast": is_coast,
 	}
 
 static func from_dict(d: Dictionary) -> Province:
@@ -78,4 +82,6 @@ static func from_dict(d: Dictionary) -> Province:
 	var nb: Array = d.get("neighbors", [])
 	p.neighbors.assign(nb)
 	p.is_capital = bool(d.get("is_capital", false))
+	p.is_sea = bool(d.get("is_sea", false))
+	p.is_coast = bool(d.get("is_coast", false))
 	return p

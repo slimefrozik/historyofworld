@@ -92,13 +92,26 @@ func _pick_terrain(center: Vector2) -> int:
 		return Province.Terrain.STEPPE
 	return Province.Terrain.PLAINS
 
+const SEA_NAMES: Array = [
+	"Northern Ocean", "Western Sea", "Eastern Ocean", "Inland Sea", "Southern Sea",
+	"Great Strait", "Open Waters", "Coastal Waters", "Deep Channel", "Distant Sea",
+]
+
+func _gen_sea_name(idx: int) -> String:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = idx * 4099 + 31
+	return String(SEA_NAMES[rng.randi_range(0, SEA_NAMES.size() - 1)])
+
 func _gen_province_name(idx: int) -> String:
 	var roots: Array = GameState.names_db.get("province_roots", ["Tarn"])
 	var prefixes: Array = GameState.names_db.get("province_prefixes", [""])
-	GameState.rng.seed = idx * 7919 + 13
-	var root: String = String(roots[GameState.rng.randi_range(0, roots.size() - 1)])
-	if GameState.rng.randf() < 0.35 and prefixes.size() > 0:
-		var pref: String = String(prefixes[GameState.rng.randi_range(0, prefixes.size() - 1)])
+	# Use a local RNG so we don't reseed the global GameState.rng (which would
+	# make all subsequent province generation deterministic on the same seed).
+	var name_rng := RandomNumberGenerator.new()
+	name_rng.seed = idx * 7919 + 13
+	var root: String = String(roots[name_rng.randi_range(0, roots.size() - 1)])
+	if name_rng.randf() < 0.35 and prefixes.size() > 0:
+		var pref: String = String(prefixes[name_rng.randi_range(0, prefixes.size() - 1)])
 		return "%s %s" % [pref, root]
 	return root
 
@@ -127,16 +140,23 @@ func generate(starting_era: String) -> void:
 				continue
 			if center.y < HEX_SIZE * 0.4 or center.y > GameState.MAP_H - HEX_SIZE * 0.4:
 				continue
-			if not _is_land(center):
-				continue
+			var is_land: bool = _is_land(center)
 			var p := Province.new()
 			p.id = GameState.provinces.size()
 			p.center = center
 			p.polygon = _hex_polygon(center, HEX_SIZE, p.id * 17 + 5)
-			p.terrain = _pick_terrain(center)
-			p.development = GameState.rng.randi_range(1, 5)
-			p.population = p.development * 1000 + GameState.rng.randi_range(0, 800)
-			p.name = _gen_province_name(p.id)
+			if is_land:
+				p.terrain = _pick_terrain(center)
+				p.development = GameState.rng.randi_range(1, 5)
+				p.population = p.development * 1000 + GameState.rng.randi_range(0, 800)
+				p.name = _gen_province_name(p.id)
+				p.is_sea = false
+			else:
+				p.terrain = Province.Terrain.SEA
+				p.development = 0
+				p.population = 0
+				p.name = _gen_sea_name(p.id)
+				p.is_sea = true
 			GameState.provinces.append(p)
 			grid[Vector2i(c, r)] = p.id
 
@@ -154,7 +174,24 @@ func generate(starting_era: String) -> void:
 				neigh.append(int(nb))
 		GameState.provinces[pid].neighbors = neigh
 
-	GameState.log_event("Generated %d provinces." % GameState.provinces.size())
+	# Mark coastal land provinces (have at least one sea neighbour) and
+	# upgrade their terrain tint to COAST when they would otherwise be plains.
+	var land_count: int = 0
+	var sea_count: int = 0
+	for p in GameState.provinces:
+		if p.is_sea:
+			sea_count += 1
+			continue
+		land_count += 1
+		for nb_id in p.neighbors:
+			var np: Province = GameState.provinces[int(nb_id)]
+			if np != null and np.is_sea:
+				p.is_coast = true
+				if p.terrain == Province.Terrain.PLAINS:
+					p.terrain = Province.Terrain.COAST
+				break
+
+	GameState.log_event("Generated %d land + %d sea provinces." % [land_count, sea_count])
 
 	_assign_starting_countries(starting_era)
 
@@ -199,6 +236,8 @@ func _assign_starting_countries(starting_era: String) -> void:
 		var assigned_provinces: Array[int] = []
 		if rx >= 0:
 			for p in GameState.provinces:
+				if p.is_sea:
+					continue
 				if p.owner_id != "" or p.center.x < rx or p.center.x >= rx + rw:
 					continue
 				if p.center.y < ry or p.center.y >= ry + rh:
