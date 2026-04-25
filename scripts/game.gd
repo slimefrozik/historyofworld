@@ -78,7 +78,9 @@ func _ready() -> void:
 	GameState.country_state_changed.connect(_on_country_state_changed)
 	GameState.date_changed.connect(_on_date_changed)
 	GameState.selection_changed.connect(_on_selection_changed)
+	GameState.province_owner_changed.connect(_on_province_owner_changed)
 	GameState.log_message.connect(_on_log_message)
+	TimeCtl.speed_changed.connect(_refresh_top_bar)
 	Locale.locale_changed.connect(func(_c): _apply_locale())
 	_apply_locale()
 	_refresh_top_bar()
@@ -360,14 +362,21 @@ func _input(event: InputEvent) -> void:
 		var handled := true
 		match event.keycode:
 			KEY_SPACE:
-				GameState.paused = not GameState.paused
-				_refresh_top_bar()
+				TimeCtl.toggle_pause()
 			KEY_EQUAL, KEY_PLUS, KEY_KP_ADD:
-				GameState.speed = min(5, GameState.speed + 1)
-				_refresh_top_bar()
+				TimeCtl.adjust_speed(+1)
 			KEY_MINUS, KEY_KP_SUBTRACT:
-				GameState.speed = max(1, GameState.speed - 1)
-				_refresh_top_bar()
+				TimeCtl.adjust_speed(-1)
+			KEY_1:
+				TimeCtl.set_speed(1); TimeCtl.set_paused(false)
+			KEY_2:
+				TimeCtl.set_speed(2); TimeCtl.set_paused(false)
+			KEY_3:
+				TimeCtl.set_speed(3); TimeCtl.set_paused(false)
+			KEY_4:
+				TimeCtl.set_speed(4); TimeCtl.set_paused(false)
+			KEY_5:
+				TimeCtl.set_speed(5); TimeCtl.set_paused(false)
 			KEY_F1:
 				diplomacy_panel.visible = not diplomacy_panel.visible
 				if diplomacy_panel.visible:
@@ -408,6 +417,14 @@ func _on_country_state_changed(cid: String) -> void:
 	if cid == GameState.player_country_id:
 		_refresh_top_bar()
 
+func _on_province_owner_changed(_pid: int) -> void:
+	# Refresh the province panel if the currently-selected province just changed
+	# hands so the player sees the new owner immediately.
+	if GameState.selected_province_id >= 0:
+		_refresh_province_panel()
+	if minimap_view != null:
+		minimap_view.queue_redraw()
+
 func _on_selection_changed(pid: int) -> void:
 	if pid >= 0:
 		province_panel.visible = true
@@ -441,11 +458,17 @@ func _refresh_top_bar() -> void:
 	top_bar_label.text += "[color=#e8c39a]%s[/color]: %d%%" % [Locale.t("TOP_CULTURAL_UNITY"), int(round(cu * 100.0))]
 	date_label.text = GameState.date_string()
 	if GameState.paused:
-		pause_label.text = "[ %s ]" % Locale.t("TOP_PAUSED")
+		pause_label.text = "[ || %s ]" % Locale.t("TOP_PAUSED")
 		pause_label.add_theme_color_override("font_color", Color(1.0, 0.7, 0.4))
 	else:
-		pause_label.text = ">> %s %d" % [Locale.t("TOP_SPEED"), GameState.speed]
-		pause_label.add_theme_color_override("font_color", Color(0.6, 0.95, 0.6))
+		var dots := ""
+		for i in range(1, TimeCtl.NUM_SPEEDS + 1):
+			dots += ">" if i <= GameState.speed else "."
+		pause_label.text = "%s  %s (%d/5)" % [dots, TimeCtl.speed_label(), GameState.speed]
+		# Tint shifts from green (slow) to amber (very fast) so the player feels
+		# the pace at a glance.
+		var t: float = float(GameState.speed - 1) / 4.0
+		pause_label.add_theme_color_override("font_color", Color(0.6, 0.95, 0.6).lerp(Color(1.0, 0.85, 0.4), t))
 
 func _refresh_province_panel() -> void:
 	var pid := GameState.selected_province_id
@@ -934,7 +957,8 @@ func _build_minimap() -> void:
 	minimap_panel.add_child(minimap_view)
 	# Refresh minimap on world events.
 	GameState.world_ready.connect(func(): minimap_view.queue_redraw())
-	GameState.country_state_changed.connect(func(_cid): minimap_view.queue_redraw())
+	# province_owner_changed already redraws the minimap via _on_province_owner_changed.
+	# Selection only repaints the highlight ring on the minimap.
 	GameState.selection_changed.connect(func(_pid): minimap_view.queue_redraw())
 	# Periodic redraw to keep viewport rect + units fresh.
 	var t := Timer.new()
@@ -1016,7 +1040,8 @@ func _help_panel_text() -> String:
 		+ "  [color=#aae]%s[/color]\n\n" % Locale.t("HELP_MINIMAP") \
 		+ "[b]%s[/b]\n" % Locale.t("HELP_TIME") \
 		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_PAUSE") \
-		+ "  [color=#aae]%s[/color]\n\n" % Locale.t("HELP_SPEED") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_SPEED") \
+		+ "  [color=#aae]%s[/color]\n\n" % Locale.t("HELP_SPEED_DIRECT") \
 		+ "[b]%s[/b]\n" % Locale.t("HELP_PANELS") \
 		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_F1") \
 		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_F2") \

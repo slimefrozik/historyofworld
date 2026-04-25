@@ -1,23 +1,73 @@
 ## Drives in-game time. Triggers daily/monthly/yearly callbacks.
+##
+## Speed model (EU-style 5 named speeds, 1 = slowest, 5 = fastest):
+##   1  Very Slow   3.0  s/day  (a year ≈ 6 minutes)
+##   2  Slow        1.5  s/day
+##   3  Normal      0.6  s/day  (default)
+##   4  Fast        0.25 s/day
+##   5  Very Fast   0.08 s/day  (a year ≈ 30 seconds)
 extends Node
 
 signal day_tick
 signal month_tick
 signal year_tick
+## Fired whenever pause state or speed changes, so the UI can refresh without
+## any per-frame polling.
+signal speed_changed
 
-const SECONDS_PER_DAY := [9999.0, 1.5, 0.6, 0.25, 0.10, 0.04] # speed 0..5 ; 0 = paused
+const NUM_SPEEDS := 5
+const SECONDS_PER_DAY := [9999.0, 3.0, 1.5, 0.6, 0.25, 0.08]
+const SPEED_LOC_KEYS := ["", "SPEED_VERY_SLOW", "SPEED_SLOW", "SPEED_NORMAL", "SPEED_FAST", "SPEED_VERY_FAST"]
+const MAX_DAYS_PER_FRAME := 6
+
 var accum: float = 0.0
+
+## Set absolute speed (1..NUM_SPEEDS). Emits speed_changed.
+func set_speed(s: int) -> void:
+	var clamped: int = clamp(s, 1, NUM_SPEEDS)
+	if clamped != GameState.speed:
+		GameState.speed = clamped
+		accum = 0.0
+		speed_changed.emit()
+
+func adjust_speed(delta: int) -> void:
+	set_speed(GameState.speed + delta)
+
+func toggle_pause() -> void:
+	GameState.paused = not GameState.paused
+	accum = 0.0
+	speed_changed.emit()
+
+func set_paused(p: bool) -> void:
+	if GameState.paused == p:
+		return
+	GameState.paused = p
+	accum = 0.0
+	speed_changed.emit()
+
+func speed_label() -> String:
+	if GameState.paused:
+		return Locale.t("TOP_PAUSED")
+	var k: String = SPEED_LOC_KEYS[clamp(GameState.speed, 1, NUM_SPEEDS)]
+	return Locale.t(k)
 
 func _process(delta: float) -> void:
 	if GameState.paused:
 		return
 	if GameState.countries.is_empty():
 		return
-	var sp: int = clamp(GameState.speed, 1, 5)
+	var sp: int = clamp(GameState.speed, 1, NUM_SPEEDS)
 	accum += delta
-	while accum >= SECONDS_PER_DAY[sp]:
-		accum -= SECONDS_PER_DAY[sp]
+	# Cap days advanced per frame so a long stall (loading screen, pause spam)
+	# doesn't trigger a giant catch-up burst that freezes the game.
+	var spd: float = SECONDS_PER_DAY[sp]
+	var steps: int = 0
+	while accum >= spd and steps < MAX_DAYS_PER_FRAME:
+		accum -= spd
 		_advance_one_day()
+		steps += 1
+	if accum > spd * MAX_DAYS_PER_FRAME:
+		accum = 0.0
 
 func _advance_one_day() -> void:
 	GameState.day += 1

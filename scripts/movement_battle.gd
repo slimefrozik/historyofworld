@@ -201,6 +201,7 @@ func _attempt_capture(u: ArmyUnit, dest: Province) -> void:
 		if c != null and not c.province_ids.has(dest.id):
 			c.province_ids.append(dest.id)
 		GameState.log_event("[OCC] %s claimed %s." % [u.owner_id, dest.name], Color(0.7, 0.9, 1.0))
+		GameState.province_owner_changed.emit(dest.id)
 		return
 	var prev_owner: Country = GameState.countries.get(dest.owner_id)
 	var c: Country = GameState.countries.get(u.owner_id)
@@ -228,6 +229,7 @@ func _attempt_capture(u: ArmyUnit, dest: Province) -> void:
 				GameState.provinces[prev_owner.capital_id].is_capital = true
 			dest.is_capital = false
 	GameState.log_event("[OCC] %s captured %s from %s." % [c.name, dest.name, prev_owner.name if prev_owner else "?"], Color(0.95, 0.7, 0.4))
+	GameState.province_owner_changed.emit(dest.id)
 
 func _unit_combat_power(u: ArmyUnit, is_defender: bool) -> float:
 	var ut: Dictionary = GameState.unit_types.get(u.type_id, {})

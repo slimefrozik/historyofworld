@@ -10,6 +10,10 @@ signal world_ready
 signal date_changed(year: int, month: int, day: int)
 signal selection_changed(province_id: int)
 signal country_state_changed(country_id: String)
+## Fired when a province changes owner (capture, peace deal, gift). Subscribers
+## that only need to redraw the map on territorial changes should listen to
+## this instead of the much noisier country_state_changed.
+signal province_owner_changed(province_id: int)
 signal log_message(text: String, color: Color)
 
 # Map size in world units (pixels)
