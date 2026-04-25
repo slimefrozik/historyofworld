@@ -1,0 +1,22 @@
+{
+  "_comment": "Regions are AABB rects in world coords (3000x1500). Provinces with center inside the rect are assigned to that region's owner country at start. All rects must overlap the LAND_BLOBS in world_generator.gd.",
+  "italy":     {"x": 1500, "y": 410, "w":  90, "h": 160},
+  "greece":    {"x": 1610, "y": 430, "w":  90, "h": 100},
+  "egypt":     {"x": 1620, "y": 620, "w": 180, "h": 120},
+  "persia":    {"x": 1860, "y": 460, "w": 220, "h": 150},
+  "china":     {"x": 2330, "y": 360, "w": 350, "h": 240},
+  "india":     {"x": 2120, "y": 540, "w": 200, "h": 220},
+  "gaul":      {"x": 1380, "y": 290, "w": 130, "h": 130},
+  "germania":  {"x": 1480, "y": 230, "w": 200, "h": 110},
+  "mongolia":  {"x": 2280, "y": 240, "w": 320, "h": 150},
+  "france":    {"x": 1380, "y": 290, "w": 140, "h": 150},
+  "britain":   {"x": 1320, "y": 220, "w": 110, "h": 150},
+  "balkans":   {"x": 1560, "y": 410, "w": 180, "h": 120},
+  "japan":     {"x": 2640, "y": 360, "w": 120, "h": 200},
+  "anatolia":  {"x": 1640, "y": 430, "w": 220, "h": 100},
+  "iberia":    {"x": 1260, "y": 340, "w": 150, "h": 160},
+  "austria":   {"x": 1480, "y": 320, "w": 150, "h": 110},
+  "russia":    {"x": 1700, "y": 130, "w": 800, "h": 280},
+  "usa":       {"x": 380,  "y": 320, "w": 380, "h": 240},
+  "germany":   {"x": 1500, "y": 280, "w": 180, "h": 110}
+}

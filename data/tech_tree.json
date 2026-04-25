@@ -1,0 +1,32 @@
+{
+  "bronze_working":     {"name": "Bronze Working",     "era": "antiquity",   "cost": 50,   "prereq": [],                          "effects": {"unit_unlock": "levy"}},
+  "iron_working":       {"name": "Iron Working",       "era": "antiquity",   "cost": 80,   "prereq": ["bronze_working"],          "effects": {"unit_unlock": "spearmen", "tax": 0.05}},
+  "horse_riding":       {"name": "Horse Riding",       "era": "antiquity",   "cost": 80,   "prereq": ["bronze_working"],          "effects": {"unit_unlock": "horse_archers"}},
+  "writing":            {"name": "Writing",            "era": "antiquity",   "cost": 100,  "prereq": ["bronze_working"],          "effects": {"research_speed": 0.10}},
+  "currency":           {"name": "Currency",           "era": "antiquity",   "cost": 110,  "prereq": ["writing"],                 "effects": {"tax": 0.10}},
+  "professional_army":  {"name": "Professional Army",  "era": "antiquity",   "cost": 140,  "prereq": ["iron_working", "currency"],"effects": {"unit_unlock": "legion", "manpower": 0.10}},
+  "philosophy":         {"name": "Philosophy",         "era": "antiquity",   "cost": 150,  "prereq": ["writing"],                 "effects": {"culture_speed": 0.15}},
+
+  "feudalism":          {"name": "Feudalism",          "era": "medieval",    "cost": 200,  "prereq": ["professional_army"],       "effects": {"unit_unlock": "knights"}},
+  "chivalry":           {"name": "Chivalry",           "era": "medieval",    "cost": 220,  "prereq": ["feudalism"],               "effects": {"unit_unlock": "men_at_arms", "stability": 0.10}},
+  "bowmaking":          {"name": "Bowmaking",          "era": "medieval",    "cost": 220,  "prereq": ["feudalism"],               "effects": {"unit_unlock": "longbowmen"}},
+  "guilds":             {"name": "Guilds",             "era": "medieval",    "cost": 240,  "prereq": ["chivalry"],                "effects": {"tax": 0.15}},
+  "scholasticism":      {"name": "Scholasticism",      "era": "medieval",    "cost": 260,  "prereq": ["philosophy", "feudalism"], "effects": {"research_speed": 0.20}},
+
+  "pike_squares":       {"name": "Pike Squares",       "era": "renaissance", "cost": 320,  "prereq": ["chivalry"],                "effects": {"unit_unlock": "pikemen"}},
+  "gunpowder":          {"name": "Gunpowder",          "era": "renaissance", "cost": 380,  "prereq": ["pike_squares"],            "effects": {"unit_unlock": "musketeers"}},
+  "cavalry_tactics":    {"name": "Cavalry Tactics",    "era": "renaissance", "cost": 360,  "prereq": ["pike_squares"],            "effects": {"unit_unlock": "cuirassiers"}},
+  "printing_press":     {"name": "Printing Press",     "era": "renaissance", "cost": 380,  "prereq": ["scholasticism"],           "effects": {"research_speed": 0.30, "culture_speed": 0.20}},
+  "banking":            {"name": "Banking",            "era": "renaissance", "cost": 400,  "prereq": ["guilds"],                  "effects": {"tax": 0.25}},
+
+  "rifling":            {"name": "Rifling",            "era": "industrial",  "cost": 500,  "prereq": ["gunpowder"],               "effects": {"unit_unlock": "line_infantry"}},
+  "ballistics":         {"name": "Ballistics",         "era": "industrial",  "cost": 540,  "prereq": ["rifling"],                 "effects": {"unit_unlock": "artillery"}},
+  "breech_loaders":     {"name": "Breech-loaders",     "era": "industrial",  "cost": 580,  "prereq": ["ballistics"],              "effects": {"unit_unlock": "riflemen"}},
+  "industrialization":  {"name": "Industrialization",  "era": "industrial",  "cost": 600,  "prereq": ["banking"],                 "effects": {"tax": 0.40}},
+  "nationalism":        {"name": "Nationalism",        "era": "industrial",  "cost": 620,  "prereq": ["printing_press"],          "effects": {"manpower": 0.30, "stability": 0.10}},
+
+  "armored_warfare":    {"name": "Armored Warfare",    "era": "modern",      "cost": 800,  "prereq": ["breech_loaders"],          "effects": {"unit_unlock": "tanks"}},
+  "combined_arms":      {"name": "Combined Arms",      "era": "modern",      "cost": 820,  "prereq": ["armored_warfare"],         "effects": {"unit_unlock": "mech_inf"}},
+  "mass_media":         {"name": "Mass Media",         "era": "modern",      "cost": 850,  "prereq": ["nationalism"],             "effects": {"culture_speed": 0.50, "stability": 0.15}},
+  "computing":          {"name": "Computing",          "era": "modern",      "cost": 900,  "prereq": ["industrialization"],       "effects": {"research_speed": 0.50, "tax": 0.20}}
+}

@@ -1,0 +1,17 @@
+{
+  "brilliant_strategist": {"name": "Brilliant Strategist", "martial": 2, "desc": "+2 Martial. +10% combat strength when leading."},
+  "craven":               {"name": "Craven",               "martial": -2, "desc": "-2 Martial. Refuses to lead in battle."},
+  "diplomat":             {"name": "Born Diplomat",        "diplomacy": 2, "desc": "+2 Diplomacy. Cheaper relationship boosts."},
+  "deceitful":            {"name": "Deceitful",            "intrigue": 2, "diplomacy": -1, "desc": "+2 Intrigue, -1 Diplomacy. Better intrigue chance."},
+  "midas_touched":        {"name": "Midas Touched",        "stewardship": 2, "desc": "+2 Stewardship. +10% tax in capital."},
+  "wasteful":             {"name": "Wasteful",             "stewardship": -2, "desc": "-2 Stewardship. -5% tax efficiency."},
+  "scholar":              {"name": "Scholar",              "learning": 2, "desc": "+2 Learning. +10% research speed."},
+  "ambitious":            {"name": "Ambitious",            "intrigue": 1, "diplomacy": 1, "desc": "Loyalty drops faster, but more proactive."},
+  "loyal":                {"name": "Loyal",                "loyalty": 1, "desc": "Will not betray the realm."},
+  "wrathful":             {"name": "Wrathful",             "martial": 1, "diplomacy": -1, "desc": "+1 Martial, -1 Diplomacy."},
+  "patient":              {"name": "Patient",              "diplomacy": 1, "stewardship": 1, "desc": "+1 Diplomacy, +1 Stewardship."},
+  "zealous":              {"name": "Zealous",              "martial": 1, "learning": -1, "desc": "+1 Martial, -1 Learning."},
+  "cynical":              {"name": "Cynical",              "intrigue": 1, "learning": 1, "desc": "+1 Intrigue, +1 Learning."},
+  "humble":               {"name": "Humble",               "stewardship": 1, "diplomacy": 1, "desc": "Stable rule, +1 Stewardship, +1 Diplomacy."},
+  "vengeful":             {"name": "Vengeful",             "martial": 1, "intrigue": 1, "desc": "Holds grudges. +1 Martial, +1 Intrigue."}
+}
