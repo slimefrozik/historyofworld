@@ -1,7 +1,7 @@
 {
-  "antiquity":   {"name": "Antiquity",         "year_start": -500,  "year_end": 500,  "starting_countries": ["ROM", "GRE", "EGY", "PER", "HAN", "MAU", "GAU", "GER"]},
-  "medieval":    {"name": "Medieval Era",      "year_start": 500,   "year_end": 1450, "starting_countries": ["FRA", "ENG", "BYZ", "MNG", "JAP", "EGY", "HAN"]},
-  "renaissance": {"name": "Age of Discovery",  "year_start": 1450,  "year_end": 1750, "starting_countries": ["OTT", "SPA", "FRA", "ENG", "AUT", "RUS", "JAP"]},
-  "industrial":  {"name": "Industrial Age",    "year_start": 1750,  "year_end": 1914, "starting_countries": ["USA", "GBR", "GER2", "FRA", "RUS", "AUT", "JAP"]},
-  "modern":      {"name": "Modern Era",        "year_start": 1914,  "year_end": 2050, "starting_countries": ["USA", "USR", "CHN", "GBR", "GER2", "FRA", "JAP"]}
+  "antiquity":   {"name": "Antiquity",         "year_start": -500,  "year_end": 500,  "starting_countries": ["ROM", "GRE", "EGY", "PER", "HAN", "MAU", "GAU", "GER", "CAR", "PAR", "SCY", "BRI", "KSH"]},
+  "medieval":    {"name": "Medieval Era",      "year_start": 500,   "year_end": 1450, "starting_countries": ["FRA", "ENG", "BYZ", "MNG", "JAP", "HRE", "ABS", "KIE", "MAL", "AZT", "KOR", "POL", "EGY2"]},
+  "renaissance": {"name": "Age of Discovery",  "year_start": 1450,  "year_end": 1750, "starting_countries": ["OTT", "SPA", "FRA2", "ENG2", "AUT", "RUS", "JAP2", "MUG", "MIN", "POR", "POL2", "SWE", "NLD"]},
+  "industrial":  {"name": "Industrial Age",    "year_start": 1750,  "year_end": 1914, "starting_countries": ["USA", "GBR", "GER2", "FRA3", "RUS2", "AUT2", "JAP3", "ITA", "OTT2", "QIN", "SPA2", "BRZ", "MEX"]},
+  "modern":      {"name": "Modern Era",        "year_start": 1914,  "year_end": 2050, "starting_countries": ["USA2", "USR", "CHN", "GBR2", "GER3", "FRA4", "JAP4", "IND", "BRZ2", "TUR", "IRN", "ITA2", "EGY3"]}
 }
