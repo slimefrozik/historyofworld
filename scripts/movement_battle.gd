@@ -155,18 +155,32 @@ func _resolve_battle(attacker: ArmyUnit, defenders: Array[int], dest: Province) 
 		if attacker.strength <= 200:
 			GameState.remove_unit(attacker.id)
 			return false
-		# Repulsed: bounce back to source. Pick a friendly/neutral neighbour
-		# rather than always nbs[0] (which could be enemy territory).
+		# Repulsed: bounce back to a passable neighbour matching the unit's
+		# travel class (naval -> sea hex, land -> land hex). Prefer
+		# friendly/neutral land tiles for land units; for naval just take any
+		# adjacent sea tile.
+		var attacker_ut: Dictionary = GameState.unit_types.get(attacker.type_id, {})
+		var attacker_naval: bool = bool(attacker_ut.get("naval", false))
 		var nbs: Array = dest.neighbors
 		var bounce_to: int = -1
 		for nid in nbs:
 			var np: Province = GameState.provinces[int(nid)]
-			if np == null or np.is_sea: continue
-			if np.owner_id == attacker.owner_id or np.owner_id == "":
-				bounce_to = int(nid)
-				break
-		if bounce_to == -1 and nbs.size() > 0:
-			bounce_to = int(nbs[0])
+			if np == null: continue
+			if np.is_sea != attacker_naval:
+				continue
+			if not attacker_naval and np.owner_id != "" and np.owner_id != attacker.owner_id:
+				# Skip enemy land tiles on first pass; we'll fall back below.
+				continue
+			bounce_to = int(nid)
+			break
+		if bounce_to == -1:
+			# Fallback: any neighbour of the right travel class, even if hostile.
+			for nid in nbs:
+				var np: Province = GameState.provinces[int(nid)]
+				if np == null: continue
+				if np.is_sea == attacker_naval:
+					bounce_to = int(nid)
+					break
 		if bounce_to != -1:
 			attacker.province_id = bounce_to
 		attacker.dest_province_id = -1
@@ -176,6 +190,9 @@ func _resolve_battle(attacker: ArmyUnit, defenders: Array[int], dest: Province) 
 		return false
 
 func _attempt_capture(u: ArmyUnit, dest: Province) -> void:
+	# Sea hexes are sovereign-less by design — fleets do not "colonize" the ocean.
+	if dest.is_sea:
+		return
 	if dest.owner_id == u.owner_id: return
 	if dest.owner_id == "":
 		# Colonize uncolonized province

@@ -22,6 +22,15 @@ var neighbors: Array[int] = []
 var is_capital: bool = false
 var is_sea: bool = false # true = sea/ocean tile (only naval units can enter)
 var is_coast: bool = false # land province with at least one sea neighbour
+var resource: String = "" # economic good produced by this province (grain/iron/...)
+# Active building project: building_id, accumulated months. Empty id = idle.
+var build_id: String = ""
+var build_progress_months: float = 0.0
+# Active religious / cultural conversion projects (paid by owner).
+var convert_religion_to: String = ""
+var convert_religion_months: float = 0.0
+var convert_culture_to: String = ""
+var convert_culture_months: float = 0.0
 
 func base_tax() -> float:
 	return float(development) * 0.5
@@ -58,7 +67,12 @@ func to_dict() -> Dictionary:
 		"development": development, "population": population, "culture": culture,
 		"religion": religion, "buildings": buildings, "garrison": garrison,
 		"unrest": unrest, "neighbors": neighbors, "is_capital": is_capital,
-		"is_sea": is_sea, "is_coast": is_coast,
+		"is_sea": is_sea, "is_coast": is_coast, "resource": resource,
+		"build_id": build_id, "build_progress_months": build_progress_months,
+		"convert_religion_to": convert_religion_to,
+		"convert_religion_months": convert_religion_months,
+		"convert_culture_to": convert_culture_to,
+		"convert_culture_months": convert_culture_months,
 	}
 
 static func from_dict(d: Dictionary) -> Province:
@@ -84,4 +98,11 @@ static func from_dict(d: Dictionary) -> Province:
 	p.is_capital = bool(d.get("is_capital", false))
 	p.is_sea = bool(d.get("is_sea", false))
 	p.is_coast = bool(d.get("is_coast", false))
+	p.resource = String(d.get("resource", ""))
+	p.build_id = String(d.get("build_id", ""))
+	p.build_progress_months = float(d.get("build_progress_months", 0.0))
+	p.convert_religion_to = String(d.get("convert_religion_to", ""))
+	p.convert_religion_months = float(d.get("convert_religion_months", 0.0))
+	p.convert_culture_to = String(d.get("convert_culture_to", ""))
+	p.convert_culture_months = float(d.get("convert_culture_months", 0.0))
 	return p

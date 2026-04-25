@@ -193,10 +193,42 @@ func generate(starting_era: String) -> void:
 
 	GameState.log_event("Generated %d land + %d sea provinces." % [land_count, sea_count])
 
+	_assign_resources()
+
 	_assign_starting_countries(starting_era)
 
 	GameState.log_event("World ready: %s era starts in %d." % [str(era_def.get("name", starting_era)), GameState.year])
 	GameState.world_ready.emit()
+
+func _assign_resources() -> void:
+	# Roughly 40% of land provinces get an economic resource based on terrain.
+	# Coastal land additionally has a higher chance of fish.
+	for p in GameState.provinces:
+		if p.is_sea:
+			continue
+		if GameState.rng.randf() > 0.45:
+			continue
+		var r: String = ""
+		match p.terrain:
+			Province.Terrain.PLAINS, Province.Terrain.STEPPE:
+				r = ["grain", "horses", "wool"][GameState.rng.randi_range(0, 2)]
+			Province.Terrain.HILLS, Province.Terrain.MOUNTAINS:
+				r = ["iron", "stone", "gold_ore"][GameState.rng.randi_range(0, 2)]
+			Province.Terrain.FOREST:
+				r = ["wood", "fur"][GameState.rng.randi_range(0, 1)]
+			Province.Terrain.JUNGLE:
+				r = ["spices", "wood"][GameState.rng.randi_range(0, 1)]
+			Province.Terrain.DESERT:
+				r = "salt"
+			Province.Terrain.TUNDRA:
+				r = "fur"
+			Province.Terrain.COAST:
+				r = "fish"
+			_:
+				r = ""
+		if p.is_coast and r == "" and GameState.rng.randf() < 0.5:
+			r = "fish"
+		p.resource = r
 
 func _assign_starting_countries(starting_era: String) -> void:
 	var era_def: Dictionary = GameState.eras_db.get(starting_era, {})
