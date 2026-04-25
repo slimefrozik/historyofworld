@@ -134,6 +134,8 @@ func date_string() -> String:
 	var y := absi(year)
 	return "%d/%02d  %d %s" % [month, day, y, era_label]
 
+## Effective relations score for display / AI decisions.
+## Allies and wars override the stored value but do NOT replace it.
 func relations_score(a: String, b: String) -> int:
 	if a == b:
 		return 0
@@ -146,13 +148,22 @@ func relations_score(a: String, b: String) -> int:
 		return -150
 	return int(relations.get(_rel_key(a, b), 0))
 
+## Raw stored relations value (ignores transient war/ally overrides).
+func relations_stored(a: String, b: String) -> int:
+	if a == b:
+		return 0
+	return int(relations.get(_rel_key(a, b), 0))
+
 func set_relations(a: String, b: String, val: int) -> void:
 	if a == b:
 		return
 	relations[_rel_key(a, b)] = clamp(val, -200, 200)
 
 func change_relations(a: String, b: String, delta: int) -> void:
-	set_relations(a, b, relations_score(a, b) + delta)
+	# Always mutate the stored value, not the transient war/ally override —
+	# otherwise ally formation would reset stored to 100, then improve_relations
+	# would compound from 100 instead of from the actual stored history.
+	set_relations(a, b, relations_stored(a, b) + delta)
 
 func is_at_war(a: String, b: String) -> bool:
 	var ca := get_country(a)
@@ -161,3 +172,59 @@ func is_at_war(a: String, b: String) -> bool:
 func is_allied(a: String, b: String) -> bool:
 	var ca := get_country(a)
 	return ca != null and ca.allies.has(b)
+
+## A* shortest path between two provinces, using neighbour adjacency.
+## `passable` is a callable taking a Province and returning true if it can be
+## traversed by the moving unit. Returns the full path (including `from`) if
+## reachable, or an empty array if no path exists or the from/to ids are bad.
+func find_path(from_id: int, to_id: int, passable: Callable = Callable()) -> Array[int]:
+	var out: Array[int] = []
+	if from_id == to_id:
+		out.append(from_id)
+		return out
+	var from_p: Province = get_province(from_id)
+	var to_p: Province = get_province(to_id)
+	if from_p == null or to_p == null:
+		return out
+	# Open: array sorted by f-cost. For ~1000 nodes a binary-heap-free version
+	# is fine; we just rescan on every pop.
+	var open: Array = [from_id]
+	var came_from: Dictionary = {}
+	var g_score: Dictionary = {from_id: 0.0}
+	while not open.is_empty():
+		# Pop node with lowest f = g + h
+		var best_idx: int = 0
+		var best_f: float = INF
+		for i in open.size():
+			var nid: int = open[i]
+			var g_val: float = float(g_score.get(nid, INF))
+			var nh: float = (provinces[nid].center.distance_to(to_p.center)) / 60.0
+			var f_val: float = g_val + nh
+			if f_val < best_f:
+				best_f = f_val
+				best_idx = i
+		var current_id: int = open[best_idx]
+		open.remove_at(best_idx)
+		if current_id == to_id:
+			# Reconstruct
+			var node: int = current_id
+			while node != from_id:
+				out.push_front(node)
+				node = int(came_from[node])
+			out.push_front(from_id)
+			return out
+		var current_p: Province = provinces[current_id]
+		for nb in current_p.neighbors:
+			var nb_id: int = int(nb)
+			var np: Province = provinces[nb_id]
+			if np == null: continue
+			if passable.is_valid() and not bool(passable.call(np)):
+				continue
+			var step_cost: float = 1.0 + float(np.terrain == Province.Terrain.MOUNTAINS) * 1.5 + float(np.terrain == Province.Terrain.JUNGLE) * 0.7
+			var tentative_g: float = float(g_score.get(current_id, INF)) + step_cost
+			if tentative_g < float(g_score.get(nb_id, INF)):
+				came_from[nb_id] = current_id
+				g_score[nb_id] = tentative_g
+				if not open.has(nb_id):
+					open.append(nb_id)
+	return out

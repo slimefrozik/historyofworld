@@ -73,13 +73,18 @@ func _ai_move_units(c: Country) -> void:
 		# At war: try to march into a neighbouring enemy province.
 		var current: Province = GameState.provinces[u.province_id]
 		if current == null: continue
+		var moved: bool = false
 		if c.at_war_with.size() > 0:
 			for nid in current.neighbors:
 				var np: Province = GameState.provinces[nid]
 				if np == null: continue
+				if np.is_sea: continue
 				if np.owner_id != "" and c.at_war_with.has(np.owner_id):
 					_order_unit_move(u, nid)
-					return
+					moved = true
+					break
+		if moved:
+			continue
 		# Else: idle / move toward capital occasionally
 		if GameState.rng.randf() < 0.05 and u.province_id != c.capital_id:
 			if current.neighbors.size() > 0:

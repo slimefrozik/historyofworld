@@ -10,11 +10,7 @@ func _process(delta: float) -> void:
 	var dir := Vector2.ZERO
 	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT):
 		dir.x -= 1.0
-	if Input.is_key_pressed(KEY_D) and not _editing_text():
-		# D conflicts with diplomacy panel - already absorbed by game.gd via _unhandled_input
-		# but Camera2D _process still pans. Ignore D when textfield focused (none here).
-		pass
-	if Input.is_key_pressed(KEY_RIGHT):
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT):
 		dir.x += 1.0
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP):
 		dir.y -= 1.0

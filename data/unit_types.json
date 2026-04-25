@@ -13,5 +13,9 @@
   "artillery":     {"name": "Artillery",       "era": "industrial","attack": 22, "defense": 6,  "discipline": 0.9, "cost_gold": 180, "cost_manpower": 600,  "upkeep": 4.0, "tech": "ballistics"},
   "riflemen":      {"name": "Riflemen",        "era": "industrial","attack": 22, "defense": 18, "discipline": 0.95,"cost_gold": 160, "cost_manpower": 1000, "upkeep": 3.5, "tech": "breech_loaders"},
   "tanks":         {"name": "Tanks",           "era": "modern",    "attack": 35, "defense": 28, "discipline": 1.0, "cost_gold": 320, "cost_manpower": 400,  "upkeep": 6.0, "tech": "armored_warfare"},
-  "mech_inf":      {"name": "Mechanized Inf.", "era": "modern",    "attack": 30, "defense": 30, "discipline": 1.0, "cost_gold": 280, "cost_manpower": 800,  "upkeep": 5.0, "tech": "combined_arms"}
+  "mech_inf":      {"name": "Mechanized Inf.", "era": "modern",    "attack": 30, "defense": 30, "discipline": 1.0, "cost_gold": 280, "cost_manpower": 800,  "upkeep": 5.0, "tech": "combined_arms"},
+  "galley":        {"name": "Galley",          "era": "antiquity", "attack": 6,  "defense": 5,  "discipline": 0.7, "cost_gold": 80,  "cost_manpower": 500,  "upkeep": 1.5, "tech": "bronze_working",     "naval": true},
+  "cog":           {"name": "Cog",             "era": "medieval",  "attack": 9,  "defense": 8,  "discipline": 0.8, "cost_gold": 130, "cost_manpower": 500,  "upkeep": 2.5, "tech": "feudalism",          "naval": true},
+  "frigate":       {"name": "Frigate",         "era": "renaissance","attack": 14, "defense": 12, "discipline": 0.85,"cost_gold": 220, "cost_manpower": 600,  "upkeep": 3.5, "tech": "pike_squares",       "naval": true},
+  "ironclad":      {"name": "Ironclad",        "era": "industrial","attack": 24, "defense": 22, "discipline": 0.95,"cost_gold": 380, "cost_manpower": 600,  "upkeep": 5.5, "tech": "rifling",            "naval": true}
 }

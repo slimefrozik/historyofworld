@@ -6,9 +6,13 @@ A top-down **geopolitical simulator** built in Godot 4.3. Lead historical nation
 
 ## Features
 
-- **Stylized world map** of Earth, procedurally divided into ~500 hex provinces with terrain (plains, forest, hills, mountains, desert, steppe, jungle, tundra, coast).
+- **Stylized world map** of Earth, procedurally divided into hex provinces — ~750 land + ~1100 sea — with terrain (plains, forest, hills, mountains, desert, steppe, jungle, tundra, coast, sea).
 - **22 playable historical nations** across 5 eras, each with their own starting region, government, culture and religion. Pick from Rome, Han China, Ptolemaic Egypt, Persia, Mauryan India, Gauls, Germanics, Mongol Khanate, Medieval France/England, Byzantium, Japan, Ottomans, Spain, Habsburg Austria, Russia, USA, British Empire, German Empire, Soviet Union, Modern China, and more.
-- **Advanced army system** with 15 era-gated unit types: levies, spearmen, horse archers, legionaries, knights, men-at-arms, longbowmen, pikemen, musketeers, cuirassiers, line infantry, artillery, riflemen, tanks, mechanized infantry. Each has attack/defense/discipline stats and unlocks via specific techs.
+- **Advanced army system** with 15 era-gated land unit types and **4 naval unit types** (Galley, Cog, Frigate, Ironclad). Each unit has attack/defense/discipline stats and unlocks via specific techs. Armies can stack on a province to combine combat power.
+- **Multi-hop pathfinding** — right-click anywhere on the map and armies plot an A* route through reachable provinces (terrain affects step cost; mountains and jungle are slower). Naval units route through sea hexes only.
+- **Generals** assigned to armies add their Martial stat as a combat bonus and trigger their personality traits in battle (Brilliant Strategist gives +10%, Craven –10%).
+- **Naval gameplay** — coastal provinces can build fleets that spawn on the adjacent sea tile; fleets travel only on sea hexes. Land armies cannot enter open sea.
+- **Minimap & hotkeys overlay** — minimap in the top-left corner with viewport rectangle and click-to-jump; press **H** for the hotkeys panel.
 - **Economy** — base tax + tech multipliers, manpower pool, building maintenance, army upkeep.
 - **Science** — 25-tech research tree spanning all 5 eras, with prerequisites, unlocks, and effects (research speed, tax, manpower, culture, stability, unit unlocks).
 - **Culture** — culture points generated per province, modified by techs.
@@ -26,14 +30,16 @@ A top-down **geopolitical simulator** built in Godot 4.3. Lead historical nation
 |---|---|
 | WASD / Arrow keys | Pan the camera |
 | Mouse wheel | Zoom in / out |
+| Click minimap (top-left) | Jump camera to that location |
 | Left-click province | Select / inspect |
 | Left-click own army | Pick up army for movement |
-| Right-click adjacent province | Move selected army there (one province per order) |
+| Right-click province | March / sail there (multi-hop A* pathfinding) |
 | Space | Pause / unpause |
 | `+` / `-` | Speed up / down (5 levels) |
-| `D` | Toggle diplomacy panel |
-| `T` | Toggle technology panel |
-| `C` | Toggle court / characters panel |
+| `F1` | Toggle diplomacy panel |
+| `F2` | Toggle court / characters panel |
+| `F3` | Toggle technology panel |
+| `H` | Toggle help / hotkeys panel |
 | `F5` | Quick save (slot `main`) |
 | `F9` | Quick load |
 | `Esc` | Close all panels |
