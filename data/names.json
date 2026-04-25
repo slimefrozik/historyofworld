@@ -1,0 +1,27 @@
+{
+  "province_prefixes": ["Old", "New", "Upper", "Lower", "North", "South", "East", "West", "Greater", "Lesser", "High", "Inner", "Outer"],
+  "province_roots": [
+    "Vesta", "Augus", "Thrac", "Tarn", "Verd", "Astra", "Cassia", "Marn", "Velar", "Korth",
+    "Brennus", "Lugdun", "Tarra", "Iberia", "Anjou", "Saxonia", "Pomeran", "Mark", "Burg", "Aquitan",
+    "Rhena", "Sava", "Drava", "Tibe", "Liguria", "Etrur", "Latia", "Apula", "Calabr", "Sicil",
+    "Hellas", "Macedon", "Epirus", "Ionia", "Lydia", "Phryg", "Caria", "Cilic", "Cappa", "Pontus",
+    "Memphis", "Thebai", "Alexandria", "Cyrene", "Numidia", "Mauret", "Sahel", "Ghana", "Mali",
+    "Yamato", "Edo", "Kyo", "Owari", "Echi", "Mino", "Ise", "Hida", "Kaga", "Sado",
+    "Beijing", "Nanjing", "Shanxi", "Gansu", "Sichuan", "Yunnan", "Hunan", "Hebei", "Wuhan",
+    "Vinland", "Erie", "Huron", "Cherokee", "Iroquoi", "Apalach", "Yuca", "Maya", "Inca", "Cuzco",
+    "Suzdal", "Novgorod", "Pskov", "Ryazan", "Tver", "Smolensk", "Vladim", "Kazan", "Astrakh"
+  ],
+  "ruler_names_male": [
+    "Aelius", "Marcus", "Lucius", "Gaius", "Tiberius", "Aurelius", "Constantine", "Justinian",
+    "Charles", "Henry", "Edward", "Richard", "William", "Philip", "Frederick", "Otto",
+    "Ivan", "Boris", "Vasily", "Mikhail", "Dmitri", "Vladimir", "Yuri", "Pyotr",
+    "Wu", "Liu", "Cao", "Zhou", "Li", "Zhang", "Wang", "Sun",
+    "Yamato", "Kazuhiko", "Toshiro", "Hiroshi", "Daisuke", "Takeshi"
+  ],
+  "ruler_names_female": [
+    "Livia", "Cornelia", "Aelia", "Theodora", "Eleanor", "Isabella", "Margaret", "Catherine",
+    "Anna", "Maria", "Sofia", "Yelena", "Olga", "Tatyana"
+  ],
+  "advisor_titles": ["Chancellor", "Steward", "Marshal", "Spymaster", "Court Mage", "Treasurer"],
+  "general_titles": ["Strategos", "Centurion", "Marshal", "Voivode", "Khan", "Shogun", "Field Marshal"]
+}

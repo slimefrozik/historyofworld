@@ -1,0 +1,9 @@
+.godot/
+.import/
+exports/*.exe
+exports/*.pck
+exports/*.x86_64
+exports/*.zip
+*.translation
+*.tmp
+*.bak
