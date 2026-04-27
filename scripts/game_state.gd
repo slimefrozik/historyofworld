@@ -48,7 +48,22 @@ var paused: bool = true
 var speed: int = 3 # 1..5
 var selected_province_id: int = -1
 var selected_unit_id: int = -1
-var event_log: Array[String] = []
+## Event log entries. Each entry is `{text, color, category}` — category is
+## one of "war", "diplo", "econ", "culture", "general". Filtered + colorized
+## by the UI layer.
+var event_log: Array = []
+
+## Ledger history — one snapshot per month for the player country, used by
+## the ledger panel to draw line graphs. Each entry:
+## {year, month, gold, manpower, research, culture, provinces, army}.
+## Capped at 240 entries (20 years).
+var ledger_history: Array = []
+
+const LOG_CAT_WAR := "war"
+const LOG_CAT_DIPLO := "diplo"
+const LOG_CAT_ECON := "econ"
+const LOG_CAT_CULTURE := "culture"
+const LOG_CAT_GENERAL := "general"
 # Symmetric relations stored as keyed dict: "A|B" -> int (A < B lexicographically)
 var relations: Dictionary = {}
 
@@ -90,6 +105,7 @@ func reset() -> void:
 	selected_province_id = -1
 	selected_unit_id = -1
 	event_log.clear()
+	ledger_history.clear()
 
 func _rel_key(a: String, b: String) -> String:
 	if a < b:
@@ -128,13 +144,37 @@ func add_character(ch: Character) -> int:
 	characters[ch.id] = ch
 	return ch.id
 
-func log_event(text: String, color: Color = Color(0.85, 0.85, 0.85)) -> void:
+func log_event(text: String, color: Color = Color(0.85, 0.85, 0.85), category: String = LOG_CAT_GENERAL) -> void:
 	var stamp := "%d/%02d/%02d  " % [year, month, day]
 	var msg := stamp + text
-	event_log.append(msg)
+	event_log.append({"text": msg, "color": color, "category": category})
 	if event_log.size() > 200:
 		event_log.pop_front()
 	log_message.emit(msg, color)
+
+## Capture a monthly snapshot of the player country for the ledger graphs.
+## Called from TimeController.on_month after tick math settles.
+func push_ledger_snapshot() -> void:
+	var c: Country = get_country(player_country_id)
+	if c == null:
+		return
+	var army_size: int = 0
+	for uid in c.unit_ids:
+		var u: ArmyUnit = units.get(uid)
+		if u != null:
+			army_size += int(u.strength)
+	ledger_history.append({
+		"year": year,
+		"month": month,
+		"gold": c.gold,
+		"manpower": c.manpower_pool,
+		"research": c.research_points,
+		"culture": c.culture_points,
+		"provinces": c.province_ids.size(),
+		"army": army_size,
+	})
+	if ledger_history.size() > 240:
+		ledger_history.pop_front()
 
 func date_string() -> String:
 	var era_label := "BC" if year < 0 else "AD"

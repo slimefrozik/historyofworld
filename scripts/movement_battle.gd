@@ -57,7 +57,7 @@ func _on_day() -> void:
 		var c: Country = GameState.countries[cid]
 		if c.is_alive and c.province_ids.is_empty() and c.unit_ids.is_empty():
 			c.is_alive = false
-			GameState.log_event("[FALL] %s has been wiped from history." % c.name, Color(1.0, 0.3, 0.3))
+			GameState.log_event("[FALL] %s has been wiped from history." % c.name, Color(1.0, 0.3, 0.3), GameState.LOG_CAT_WAR)
 
 func _arrive(u: ArmyUnit) -> void:
 	var dest: Province = GameState.provinces[u.dest_province_id]
@@ -143,7 +143,7 @@ func _resolve_battle(attacker: ArmyUnit, defenders: Array[int], dest: Province) 
 	var att_name: String = atk_country.name if atk_country != null else attacker.owner_id
 	var def_name: String = def_country.name if def_country != null else "Defenders"
 	if atk_roll > def_roll:
-		GameState.log_event("[BATTLE] %s defeated %s at %s." % [att_name, def_name, dest.name], Color(0.95, 0.5, 0.4))
+		GameState.log_event("[BATTLE] %s defeated %s at %s." % [att_name, def_name, dest.name], Color(0.95, 0.5, 0.4), GameState.LOG_CAT_WAR)
 		# Eliminate destroyed defender stacks
 		for did in defenders:
 			var du: ArmyUnit = GameState.units.get(did)
@@ -151,7 +151,7 @@ func _resolve_battle(attacker: ArmyUnit, defenders: Array[int], dest: Province) 
 				GameState.remove_unit(did)
 		return true
 	else:
-		GameState.log_event("[BATTLE] %s repulsed %s at %s." % [def_name, att_name, dest.name], Color(0.95, 0.5, 0.4))
+		GameState.log_event("[BATTLE] %s repulsed %s at %s." % [def_name, att_name, dest.name], Color(0.95, 0.5, 0.4), GameState.LOG_CAT_WAR)
 		if attacker.strength <= 200:
 			GameState.remove_unit(attacker.id)
 			return false
@@ -200,7 +200,7 @@ func _attempt_capture(u: ArmyUnit, dest: Province) -> void:
 		var c: Country = GameState.countries.get(u.owner_id)
 		if c != null and not c.province_ids.has(dest.id):
 			c.province_ids.append(dest.id)
-		GameState.log_event("[OCC] %s claimed %s." % [u.owner_id, dest.name], Color(0.7, 0.9, 1.0))
+		GameState.log_event("[OCC] %s claimed %s." % [u.owner_id, dest.name], Color(0.7, 0.9, 1.0), GameState.LOG_CAT_WAR)
 		GameState.province_owner_changed.emit(dest.id)
 		return
 	var prev_owner: Country = GameState.countries.get(dest.owner_id)
@@ -222,13 +222,13 @@ func _attempt_capture(u: ArmyUnit, dest: Province) -> void:
 		# If conquering capital, severe stability hit + maybe collapse
 		if dest.is_capital:
 			prev_owner.stability = max(-3.0, prev_owner.stability - 1.5)
-			GameState.log_event("[CAPITAL!] %s seized %s's capital %s!" % [c.name, prev_owner.name, dest.name], Color(1.0, 0.5, 0.5))
+			GameState.log_event("[CAPITAL!] %s seized %s's capital %s!" % [c.name, prev_owner.name, dest.name], Color(1.0, 0.5, 0.5), GameState.LOG_CAT_WAR)
 			# move capital to a remaining province if any
 			if prev_owner.province_ids.size() > 0:
 				prev_owner.capital_id = prev_owner.province_ids[0]
 				GameState.provinces[prev_owner.capital_id].is_capital = true
 			dest.is_capital = false
-	GameState.log_event("[OCC] %s captured %s from %s." % [c.name, dest.name, prev_owner.name if prev_owner else "?"], Color(0.95, 0.7, 0.4))
+	GameState.log_event("[OCC] %s captured %s from %s." % [c.name, dest.name, prev_owner.name if prev_owner else "?"], Color(0.95, 0.7, 0.4), GameState.LOG_CAT_WAR)
 	GameState.province_owner_changed.emit(dest.id)
 
 func _unit_combat_power(u: ArmyUnit, is_defender: bool) -> float:

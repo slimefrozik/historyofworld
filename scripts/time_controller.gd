@@ -157,7 +157,7 @@ func _on_month() -> void:
 				var need: float = float(bd.get("build_months", 1))
 				if p.build_progress_months >= need:
 					p.buildings.append(p.build_id)
-					GameState.log_event("[%s] %s built in %s." % [c.name, String(bd.get("name_key", p.build_id)), p.name], Color(0.7, 0.9, 1.0))
+					GameState.log_event("[%s] %s built in %s." % [c.name, String(bd.get("name_key", p.build_id)), p.name], Color(0.7, 0.9, 1.0), GameState.LOG_CAT_ECON)
 					p.build_id = ""
 					p.build_progress_months = 0.0
 			# Religious conversion project.
@@ -167,7 +167,7 @@ func _on_month() -> void:
 				p.convert_religion_months -= speed
 				if p.convert_religion_months <= 0.0:
 					p.religion = p.convert_religion_to
-					GameState.log_event("[%s] %s converted to %s." % [c.name, p.name, p.religion], Color(0.85, 0.7, 1.0))
+					GameState.log_event("[%s] %s converted to %s." % [c.name, p.name, p.religion], Color(0.85, 0.7, 1.0), GameState.LOG_CAT_CULTURE)
 					p.convert_religion_to = ""
 					p.convert_religion_months = 0.0
 			# Cultural assimilation (slow, no upkeep — flag-only).
@@ -175,7 +175,7 @@ func _on_month() -> void:
 				p.convert_culture_months -= 1.0
 				if p.convert_culture_months <= 0.0:
 					p.culture = p.convert_culture_to
-					GameState.log_event("[%s] %s assimilated to %s culture." % [c.name, p.name, p.culture], Color(0.7, 0.95, 0.95))
+					GameState.log_event("[%s] %s assimilated to %s culture." % [c.name, p.name, p.culture], Color(0.7, 0.95, 0.95), GameState.LOG_CAT_CULTURE)
 					p.convert_culture_to = ""
 					p.convert_culture_months = 0.0
 			# Auto-creep: very slow drift toward owner culture in unconverted provinces.
@@ -203,9 +203,10 @@ func _on_month() -> void:
 			if c.research_points >= cost:
 				c.research_points -= cost
 				c.researched_techs.append(c.current_research)
-				GameState.log_event("[%s] %s researched %s." % [c.id, c.name, String(tdef.get("name", c.current_research))], Color(0.6, 0.85, 1.0))
+				GameState.log_event("[%s] %s researched %s." % [c.id, c.name, String(tdef.get("name", c.current_research))], Color(0.6, 0.85, 1.0), GameState.LOG_CAT_ECON)
 				c.current_research = ""
 		GameState.country_state_changed.emit(cid)
+	GameState.push_ledger_snapshot()
 
 func _on_year() -> void:
 	# Yearly: relations decay toward 0, characters age.
