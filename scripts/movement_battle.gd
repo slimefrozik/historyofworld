@@ -222,6 +222,12 @@ func _attempt_capture(u: ArmyUnit, dest: Province) -> void:
 		dest.siege_attacker_id = u.owner_id
 		dest.siege_progress = 0.0
 		GameState.log_event("[SIEGE] %s begins siege of %s." % [c.name, dest.name], Color(0.95, 0.7, 0.4), GameState.LOG_CAT_WAR)
+	# The unit must stay to maintain the siege. Clear any queued multi-hop
+	# path so an enemy fort is actually besieged instead of marched past.
+	u.path.clear()
+	u.orders = "idle"
+	u.dest_province_id = -1
+	u.move_progress = 0.0
 
 func _unit_combat_power(u: ArmyUnit, is_defender: bool) -> float:
 	var ut: Dictionary = GameState.unit_types.get(u.type_id, {})
