@@ -215,6 +215,15 @@ func make_peace(a: String, b: String) -> void:
 	ca.at_war_with.erase(b)
 	cb.at_war_with.erase(a)
 	GameState.change_relations(a, b, 30)
+	# Clear any ongoing sieges between the two parties (in both directions).
+	for p in GameState.provinces:
+		if p.is_sea: continue
+		if p.siege_attacker_id == "": continue
+		var between_ab: bool = (p.siege_attacker_id == a and p.owner_id == b) or (p.siege_attacker_id == b and p.owner_id == a)
+		if between_ab:
+			p.siege_attacker_id = ""
+			p.siege_progress = 0.0
+			GameState.province_owner_changed.emit(p.id)
 	GameState.log_event("[PEACE] %s and %s signed a treaty." % [ca.name, cb.name], Color(0.7, 1.0, 0.7), GameState.LOG_CAT_WAR)
 
 func form_alliance(a: String, b: String) -> void:

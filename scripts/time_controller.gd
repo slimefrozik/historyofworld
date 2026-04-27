@@ -230,6 +230,13 @@ func _process_sieges_and_attrition() -> void:
 			p.siege_attacker_id = ""
 			p.siege_progress = 0.0
 			continue
+		# Cancel any ongoing siege once the two countries are at peace — a
+		# signed treaty should not allow territorial flips to keep ticking.
+		var attacker_c: Country = GameState.countries.get(p.siege_attacker_id)
+		if attacker_c == null or not attacker_c.at_war_with.has(p.owner_id):
+			p.siege_attacker_id = ""
+			p.siege_progress = 0.0
+			continue
 		# Advance siege: harder forts take longer. Duration in months.
 		var duration: float = 6.0 * float(max(1, p.fort_level)) + 3.0
 		p.siege_progress += 1.0 / duration
