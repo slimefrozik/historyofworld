@@ -165,6 +165,10 @@
   "BLD_WORKSHOP_DESC": "+25% local research income",
   "BLD_HARBOUR": "Harbour",
   "BLD_HARBOUR_DESC": "+50% local trade, enables long-range fleets",
+  "BLD_FORT": "Fort",
+  "BLD_FORT_DESC": "+1 fort level (forces sieges, +15% defender combat, +500 garrison)",
+  "PROVINCE_FORT_LEVEL": "Fort",
+  "PROVINCE_SIEGE": "Siege by %s (%d%%)",
 
   "EVT_BUILDING_DONE": "%s completed in %s.",
   "EVT_BUILDING_START": "Began construction of %s in %s.",

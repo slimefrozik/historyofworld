@@ -193,43 +193,35 @@ func _attempt_capture(u: ArmyUnit, dest: Province) -> void:
 	# Sea hexes are sovereign-less by design — fleets do not "colonize" the ocean.
 	if dest.is_sea:
 		return
-	if dest.owner_id == u.owner_id: return
+	if dest.owner_id == u.owner_id:
+		# Friendly arrival clears any active siege on this province.
+		dest.siege_attacker_id = ""
+		dest.siege_progress = 0.0
+		return
 	if dest.owner_id == "":
-		# Colonize uncolonized province
+		# Colonize uncolonized province immediately.
 		dest.owner_id = u.owner_id
-		var c: Country = GameState.countries.get(u.owner_id)
-		if c != null and not c.province_ids.has(dest.id):
-			c.province_ids.append(dest.id)
+		var cc: Country = GameState.countries.get(u.owner_id)
+		if cc != null and not cc.province_ids.has(dest.id):
+			cc.province_ids.append(dest.id)
 		GameState.log_event("[OCC] %s claimed %s." % [u.owner_id, dest.name], Color(0.7, 0.9, 1.0), GameState.LOG_CAT_WAR)
 		GameState.province_owner_changed.emit(dest.id)
 		return
-	var prev_owner: Country = GameState.countries.get(dest.owner_id)
 	var c: Country = GameState.countries.get(u.owner_id)
-	if c == null: return
-	if not c.at_war_with.has(dest.owner_id):
-		# Not at war - cannot capture
+	if c == null:
 		return
-	# Transfer province
-	if prev_owner != null:
-		prev_owner.province_ids.erase(dest.id)
-	dest.owner_id = u.owner_id
-	dest.unrest = 4.0 # fresh occupation
-	if not c.province_ids.has(dest.id):
-		c.province_ids.append(dest.id)
-	c.prestige = clamp(c.prestige + 5.0, -100.0, 100.0)
-	if prev_owner != null:
-		prev_owner.prestige = clamp(prev_owner.prestige - 5.0, -100.0, 100.0)
-		# If conquering capital, severe stability hit + maybe collapse
-		if dest.is_capital:
-			prev_owner.stability = max(-3.0, prev_owner.stability - 1.5)
-			GameState.log_event("[CAPITAL!] %s seized %s's capital %s!" % [c.name, prev_owner.name, dest.name], Color(1.0, 0.5, 0.5), GameState.LOG_CAT_WAR)
-			# move capital to a remaining province if any
-			if prev_owner.province_ids.size() > 0:
-				prev_owner.capital_id = prev_owner.province_ids[0]
-				GameState.provinces[prev_owner.capital_id].is_capital = true
-			dest.is_capital = false
-	GameState.log_event("[OCC] %s captured %s from %s." % [c.name, dest.name, prev_owner.name if prev_owner else "?"], Color(0.95, 0.7, 0.4), GameState.LOG_CAT_WAR)
-	GameState.province_owner_changed.emit(dest.id)
+	if not c.at_war_with.has(dest.owner_id):
+		return
+	# At war with the owner: start (or continue) a siege. Forts force real
+	# siege time; an unfortified province (fort_level == 0) falls instantly —
+	# identical to the pre-siege behaviour for backwards feel.
+	if dest.fort_level <= 0:
+		GameState.flip_province_ownership(dest, u.owner_id)
+		return
+	if dest.siege_attacker_id != u.owner_id:
+		dest.siege_attacker_id = u.owner_id
+		dest.siege_progress = 0.0
+		GameState.log_event("[SIEGE] %s begins siege of %s." % [c.name, dest.name], Color(0.95, 0.7, 0.4), GameState.LOG_CAT_WAR)
 
 func _unit_combat_power(u: ArmyUnit, is_defender: bool) -> float:
 	var ut: Dictionary = GameState.unit_types.get(u.type_id, {})

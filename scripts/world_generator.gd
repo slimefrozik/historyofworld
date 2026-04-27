@@ -429,6 +429,8 @@ func _assign_starting_countries(starting_era: String) -> void:
 			c.capital_id = cap_id
 			GameState.provinces[cap_id].is_capital = true
 			GameState.provinces[cap_id].development = max(GameState.provinces[cap_id].development, 6)
+			# Capitals start with a small fort so enemy conquests require a siege.
+			GameState.provinces[cap_id].fort_level = 1
 
 		# Spawn ruler + advisors + generals.
 		var ruler_male: bool = GameState.rng.randf() < 0.85
@@ -503,6 +505,62 @@ func _pick_traits(pool: Array, n: int) -> Array[String]:
 	for i in range(min(n, copy.size())):
 		out.append(String(copy[i]))
 	return out
+
+## Major rivers as polylines in (lon, lat). Converted to world coords on demand
+## and rendered by MapView as cyan streams. Source-to-mouth ordering.
+const RIVERS_LONLAT: Array = [
+	# Nile
+	[[31.5, 30.0], [31.5, 27.0], [33.0, 24.0], [33.0, 20.0], [32.0, 16.0], [32.0, 10.0], [30.5, 2.5]],
+	# Amazon
+	[[-50.0, -0.5], [-55.0, -2.0], [-62.0, -3.5], [-68.0, -4.0], [-73.0, -4.5], [-77.0, -6.5]],
+	# Mississippi
+	[[-89.5, 29.0], [-91.0, 33.0], [-91.0, 37.0], [-91.5, 42.0], [-93.0, 45.0], [-95.0, 47.5]],
+	# Danube
+	[[29.5, 45.0], [26.0, 44.0], [22.0, 44.5], [19.0, 45.5], [15.0, 48.0], [10.0, 48.0], [8.2, 48.0]],
+	# Rhine
+	[[4.2, 52.0], [6.5, 50.5], [7.5, 49.5], [8.0, 47.5]],
+	# Volga
+	[[48.0, 46.0], [46.0, 50.0], [44.0, 54.0], [42.0, 57.0], [36.0, 57.0]],
+	# Don
+	[[40.0, 47.0], [42.0, 50.0], [43.0, 53.0], [40.0, 55.0]],
+	# Yangtze
+	[[121.5, 31.5], [118.0, 31.5], [112.0, 30.5], [106.0, 29.5], [100.0, 29.0], [94.0, 32.0]],
+	# Huang He (Yellow)
+	[[118.0, 37.5], [114.0, 35.0], [110.0, 35.0], [105.0, 36.0], [100.0, 35.0], [96.0, 34.0]],
+	# Ganges
+	[[89.0, 23.0], [86.0, 24.5], [83.0, 25.5], [79.0, 27.0], [77.0, 29.0]],
+	# Indus
+	[[67.0, 24.0], [69.0, 27.0], [71.0, 31.0], [73.0, 34.0], [76.0, 35.0]],
+	# Tigris / Euphrates merged
+	[[48.5, 30.0], [46.0, 31.5], [44.0, 33.0], [41.0, 36.0], [38.0, 38.5]],
+	# Mekong
+	[[106.5, 10.5], [105.5, 13.0], [104.0, 16.0], [102.0, 18.0], [100.0, 20.5], [97.0, 23.0]],
+	# Congo
+	[[12.5, -6.0], [18.0, -4.0], [22.0, -2.0], [25.0, 0.0], [28.0, 1.5]],
+	# Niger
+	[[7.5, 4.5], [5.0, 8.5], [0.0, 11.0], [-5.0, 13.0], [-10.0, 12.0]],
+	# Ob
+	[[70.0, 66.5], [72.0, 62.0], [75.0, 58.0], [77.0, 54.0], [79.0, 50.0]],
+	# Lena
+	[[125.0, 72.0], [125.0, 68.0], [125.0, 64.0], [120.0, 60.0], [108.0, 54.0]],
+]
+
+## Caches rivers converted to world coords. Built once on first request.
+var _rivers_world: Array = []
+
+func rivers_world() -> Array:
+	if not _rivers_world.is_empty():
+		return _rivers_world
+	for poly in RIVERS_LONLAT:
+		var out := PackedVector2Array()
+		for pt in poly:
+			var lon: float = float(pt[0])
+			var lat: float = float(pt[1])
+			var x: float = (lon + 180.0) / 360.0 * GameState.MAP_W
+			var y: float = (90.0 - lat) / 180.0 * GameState.MAP_H
+			out.append(Vector2(x, y))
+		_rivers_world.append(out)
+	return _rivers_world
 
 func _starter_unit_for(era: String) -> String:
 	match era:
