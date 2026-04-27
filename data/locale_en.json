@@ -181,5 +181,19 @@
 
   "LOG_RECRUITED": "Recruited %s in %s.",
   "LOG_LAUNCHED": "Launched %s from %s.",
-  "LOG_MARCH": "%s ordered to %s (%d hexes)."
+  "LOG_MARCH": "%s ordered to %s (%d hexes).",
+
+  "LOG_CAT_WAR": "War",
+  "LOG_CAT_DIPLO": "Diplo",
+  "LOG_CAT_ECON": "Econ",
+  "LOG_CAT_CULTURE": "Culture",
+  "LOG_CAT_GENERAL": "General",
+  "LOG_FILTER_TIP": "Toggle this category in the event log.",
+
+  "LEDGER_TITLE": "Ledger",
+  "LEDGER_EMPTY": "No history yet — data appears after the first month tick.",
+  "LEDGER_PROVINCES": "Provinces",
+  "LEDGER_ARMY": "Army size",
+  "UI_CLOSE": "Close",
+  "HELP_LEDGER": "L — open the ledger (monthly stats graphs)"
 }

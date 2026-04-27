@@ -143,7 +143,7 @@ func declare_war(attacker: String, defender: String) -> void:
 	GameState.set_relations(attacker, defender, -150)
 	ca.stability = max(-3.0, ca.stability - 0.5)
 	cd.stability = max(-3.0, cd.stability - 1.0)
-	GameState.log_event("[WAR] %s declared war on %s!" % [ca.name, cd.name], Color(1.0, 0.4, 0.4))
+	GameState.log_event("[WAR] %s declared war on %s!" % [ca.name, cd.name], Color(1.0, 0.4, 0.4), GameState.LOG_CAT_WAR)
 
 func make_peace(a: String, b: String) -> void:
 	var ca: Country = GameState.countries.get(a)
@@ -152,7 +152,7 @@ func make_peace(a: String, b: String) -> void:
 	ca.at_war_with.erase(b)
 	cb.at_war_with.erase(a)
 	GameState.change_relations(a, b, 30)
-	GameState.log_event("[PEACE] %s and %s signed a treaty." % [ca.name, cb.name], Color(0.7, 1.0, 0.7))
+	GameState.log_event("[PEACE] %s and %s signed a treaty." % [ca.name, cb.name], Color(0.7, 1.0, 0.7), GameState.LOG_CAT_WAR)
 
 func form_alliance(a: String, b: String) -> void:
 	var ca: Country = GameState.countries.get(a)
@@ -164,7 +164,7 @@ func form_alliance(a: String, b: String) -> void:
 	if not cb.allies.has(a):
 		cb.allies.append(a)
 	GameState.change_relations(a, b, 50)
-	GameState.log_event("[ALLY] %s and %s formed an alliance." % [ca.name, cb.name], Color(0.6, 0.9, 1.0))
+	GameState.log_event("[ALLY] %s and %s formed an alliance." % [ca.name, cb.name], Color(0.6, 0.9, 1.0), GameState.LOG_CAT_DIPLO)
 
 func break_alliance(a: String, b: String) -> void:
 	var ca: Country = GameState.countries.get(a)
@@ -173,7 +173,7 @@ func break_alliance(a: String, b: String) -> void:
 	ca.allies.erase(b)
 	cb.allies.erase(a)
 	GameState.change_relations(a, b, -40)
-	GameState.log_event("[ALLY-] %s broke alliance with %s." % [ca.name, cb.name], Color(1.0, 0.7, 0.4))
+	GameState.log_event("[ALLY-] %s broke alliance with %s." % [ca.name, cb.name], Color(1.0, 0.7, 0.4), GameState.LOG_CAT_DIPLO)
 
 func send_gift(from_id: String, to_id: String, amount: float) -> bool:
 	var f: Country = GameState.countries.get(from_id)
@@ -198,7 +198,7 @@ func fabricate_claim(from_id: String, target_province: int) -> bool:
 	f.gold -= 80.0
 	if not f.claims.has(target_province):
 		f.claims.append(target_province)
-	GameState.log_event("[INTRIGUE] %s fabricated claim on %s." % [f.name, p.name], Color(0.95, 0.7, 1.0))
+	GameState.log_event("[INTRIGUE] %s fabricated claim on %s." % [f.name, p.name], Color(0.95, 0.7, 1.0), GameState.LOG_CAT_DIPLO)
 	GameState.change_relations(from_id, p.owner_id, -20)
 	return true
 
@@ -213,12 +213,12 @@ func send_spy(from_id: String, to_id: String) -> bool:
 		if not f.researched_techs.has(tid):
 			stealable.append(tid)
 	if stealable.is_empty():
-		GameState.log_event("[INTRIGUE] %s spy returned with nothing useful." % f.name, Color(0.85, 0.85, 0.5))
+		GameState.log_event("[INTRIGUE] %s spy returned with nothing useful." % f.name, Color(0.85, 0.85, 0.5), GameState.LOG_CAT_DIPLO)
 		GameState.change_relations(from_id, to_id, -5)
 		return true
 	stealable.shuffle()
 	f.researched_techs.append(String(stealable[0]))
-	GameState.log_event("[INTRIGUE] %s stole tech %s from %s." % [f.name, String(stealable[0]), t.name], Color(0.95, 0.7, 1.0))
+	GameState.log_event("[INTRIGUE] %s stole tech %s from %s." % [f.name, String(stealable[0]), t.name], Color(0.95, 0.7, 1.0), GameState.LOG_CAT_DIPLO)
 	GameState.change_relations(from_id, to_id, -25)
 	return true
 
@@ -251,9 +251,9 @@ func attempt_assassination(from_id: String, to_id: String) -> bool:
 		t.ruler_id = GameState.add_character(heir)
 		t.stability = max(-3.0, t.stability - 1.0)
 		t.legitimacy = max(0.4, t.legitimacy - 0.3)
-		GameState.log_event("[INTRIGUE] %s's ruler was assassinated! %s ascends." % [t.name, heir.name], Color(0.95, 0.4, 0.95))
+		GameState.log_event("[INTRIGUE] %s's ruler was assassinated! %s ascends." % [t.name, heir.name], Color(0.95, 0.4, 0.95), GameState.LOG_CAT_DIPLO)
 		GameState.change_relations(from_id, to_id, -60)
 		return true
-	GameState.log_event("[INTRIGUE] Assassination attempt against %s failed." % t.name, Color(0.85, 0.85, 0.5))
+	GameState.log_event("[INTRIGUE] Assassination attempt against %s failed." % t.name, Color(0.85, 0.85, 0.5), GameState.LOG_CAT_DIPLO)
 	GameState.change_relations(from_id, to_id, -10)
 	return false

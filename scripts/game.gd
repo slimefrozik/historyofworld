@@ -48,6 +48,15 @@ var save_btn: Button
 var load_btn: Button
 var save_close: Button
 var event_log_label: RichTextLabel
+var _log_filter_row: HBoxContainer
+var _log_filter_buttons: Dictionary = {} # category -> Button
+var _log_filters: Dictionary = {
+	"war": true, "diplo": true, "econ": true, "culture": true, "general": true,
+}
+var ledger_panel: PanelContainer
+var ledger_view: Control
+var ledger_close: Button
+var ledger_title: Label
 
 var hovered_province: int = -1
 var move_mode_unit: int = -1
@@ -81,6 +90,7 @@ func _ready() -> void:
 	GameState.province_owner_changed.connect(_on_province_owner_changed)
 	GameState.log_message.connect(_on_log_message)
 	TimeCtl.speed_changed.connect(_refresh_top_bar)
+	TimeCtl.month_tick.connect(_on_month_tick_ui)
 	Locale.locale_changed.connect(func(_c): _apply_locale())
 	_apply_locale()
 	_refresh_top_bar()
@@ -301,10 +311,10 @@ func _build_ui() -> void:
 	save_close.pressed.connect(func(): save_panel.visible = false)
 	spv.add_child(save_close)
 
-	# Event log (bottom-right)
+	# Event log (bottom-right) with category filter row.
 	var log_panel := PanelContainer.new()
-	log_panel.position = Vector2(1100, 700)
-	log_panel.size = Vector2(490, 200)
+	log_panel.position = Vector2(1100, 684)
+	log_panel.size = Vector2(490, 216)
 	var lsb := StyleBoxFlat.new()
 	lsb.bg_color = Color(0.04, 0.07, 0.12, 0.85)
 	lsb.border_color = Color(0.4, 0.5, 0.7, 0.4)
@@ -319,20 +329,177 @@ func _build_ui() -> void:
 	log_panel.add_theme_stylebox_override("panel", lsb)
 	ui_layer.add_child(log_panel)
 	var lmm := MarginContainer.new()
-	lmm.add_theme_constant_override("margin_top", 8)
+	lmm.add_theme_constant_override("margin_top", 6)
 	lmm.add_theme_constant_override("margin_left", 10)
 	lmm.add_theme_constant_override("margin_right", 10)
-	lmm.add_theme_constant_override("margin_bottom", 8)
+	lmm.add_theme_constant_override("margin_bottom", 6)
 	log_panel.add_child(lmm)
+	var log_vb := VBoxContainer.new()
+	log_vb.add_theme_constant_override("separation", 4)
+	lmm.add_child(log_vb)
+	_log_filter_row = HBoxContainer.new()
+	_log_filter_row.add_theme_constant_override("separation", 4)
+	log_vb.add_child(_log_filter_row)
+	_build_log_filter_buttons()
 	event_log_label = RichTextLabel.new()
 	event_log_label.bbcode_enabled = true
 	event_log_label.scroll_active = true
 	event_log_label.scroll_following = true
 	event_log_label.fit_content = false
-	event_log_label.custom_minimum_size = Vector2(470, 184)
-	lmm.add_child(event_log_label)
+	event_log_label.custom_minimum_size = Vector2(470, 168)
+	log_vb.add_child(event_log_label)
 	_build_minimap()
 	_build_help_panel()
+	_build_ledger_panel()
+
+func _build_log_filter_buttons() -> void:
+	# 5 toggle pills — click to hide/show that category in the event log.
+	var specs := [
+		{"cat": "war", "label_key": "LOG_CAT_WAR", "color": Color(0.95, 0.55, 0.45)},
+		{"cat": "diplo", "label_key": "LOG_CAT_DIPLO", "color": Color(0.6, 0.85, 1.0)},
+		{"cat": "econ", "label_key": "LOG_CAT_ECON", "color": Color(0.95, 0.8, 0.45)},
+		{"cat": "culture", "label_key": "LOG_CAT_CULTURE", "color": Color(0.85, 0.7, 1.0)},
+		{"cat": "general", "label_key": "LOG_CAT_GENERAL", "color": Color(0.75, 0.8, 0.9)},
+	]
+	for s in specs:
+		var cat: String = s.cat
+		var b := Button.new()
+		b.toggle_mode = true
+		b.button_pressed = true
+		b.text = Locale.t(s.label_key)
+		b.tooltip_text = Locale.t("LOG_FILTER_TIP")
+		b.add_theme_font_size_override("font_size", 12)
+		b.add_theme_color_override("font_color", s.color)
+		b.custom_minimum_size = Vector2(70, 22)
+		b.toggled.connect(func(on: bool):
+			_log_filters[cat] = on
+			_refresh_event_log())
+		_log_filter_row.add_child(b)
+		_log_filter_buttons[cat] = b
+
+func _build_ledger_panel() -> void:
+	ledger_panel = PanelContainer.new()
+	ledger_panel.position = Vector2(200, 80)
+	ledger_panel.size = Vector2(820, 520)
+	ledger_panel.visible = false
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.05, 0.08, 0.13, 0.95)
+	sb.border_color = Color(0.5, 0.6, 0.85, 0.7)
+	sb.border_width_left = 2
+	sb.border_width_right = 2
+	sb.border_width_top = 2
+	sb.border_width_bottom = 2
+	sb.corner_radius_top_left = 8
+	sb.corner_radius_top_right = 8
+	sb.corner_radius_bottom_left = 8
+	sb.corner_radius_bottom_right = 8
+	ledger_panel.add_theme_stylebox_override("panel", sb)
+	ui_layer.add_child(ledger_panel)
+	var mm := MarginContainer.new()
+	mm.add_theme_constant_override("margin_top", 12)
+	mm.add_theme_constant_override("margin_left", 14)
+	mm.add_theme_constant_override("margin_right", 14)
+	mm.add_theme_constant_override("margin_bottom", 12)
+	ledger_panel.add_child(mm)
+	var vb := VBoxContainer.new()
+	vb.add_theme_constant_override("separation", 8)
+	mm.add_child(vb)
+	var header := HBoxContainer.new()
+	header.alignment = BoxContainer.ALIGNMENT_BEGIN
+	vb.add_child(header)
+	ledger_title = Label.new()
+	ledger_title.add_theme_font_size_override("font_size", 20)
+	ledger_title.add_theme_color_override("font_color", Color(0.95, 0.85, 0.4))
+	ledger_title.custom_minimum_size = Vector2(720, 32)
+	header.add_child(ledger_title)
+	ledger_close = Button.new()
+	ledger_close.custom_minimum_size = Vector2(60, 28)
+	ledger_close.pressed.connect(func(): ledger_panel.visible = false)
+	header.add_child(ledger_close)
+	ledger_view = Control.new()
+	ledger_view.custom_minimum_size = Vector2(792, 448)
+	ledger_view.draw.connect(_draw_ledger)
+	vb.add_child(ledger_view)
+
+func _toggle_ledger() -> void:
+	ledger_panel.visible = not ledger_panel.visible
+	if ledger_panel.visible:
+		_refresh_ledger()
+
+func _refresh_ledger() -> void:
+	if ledger_view == null:
+		return
+	ledger_title.text = Locale.t("LEDGER_TITLE") + "  —  " + GameState.date_string()
+	ledger_close.text = Locale.t("UI_CLOSE")
+	ledger_view.queue_redraw()
+
+const LEDGER_SERIES: Array = [
+	{"field": "gold",      "color": Color(0.95, 0.85, 0.4), "label_key": "TOP_GOLD"},
+	{"field": "manpower",  "color": Color(0.95, 0.45, 0.4), "label_key": "TOP_MANPOWER"},
+	{"field": "research",  "color": Color(0.4, 0.7, 1.0),   "label_key": "TOP_RESEARCH"},
+	{"field": "culture",   "color": Color(0.75, 0.55, 1.0), "label_key": "TOP_CULTURE_PT"},
+	{"field": "provinces", "color": Color(0.55, 0.95, 0.6), "label_key": "LEDGER_PROVINCES"},
+	{"field": "army",      "color": Color(1.0, 0.7, 0.45),  "label_key": "LEDGER_ARMY"},
+]
+
+func _draw_ledger() -> void:
+	# Draws a 3x2 grid of sparkline-style line charts, one per series.
+	var hist: Array = GameState.ledger_history
+	if ledger_view == null:
+		return
+	var W: float = ledger_view.size.x
+	var H: float = ledger_view.size.y
+	if W <= 0 or H <= 0:
+		return
+	var cols := 3
+	var rows := 2
+	var cell_w: float = W / float(cols)
+	var cell_h: float = H / float(rows)
+	var pad_x: float = 16.0
+	var pad_y: float = 26.0
+	var font := ThemeDB.fallback_font
+	for i in range(LEDGER_SERIES.size()):
+		var spec: Dictionary = LEDGER_SERIES[i]
+		var cx: float = (i % cols) * cell_w
+		var cy: float = (i / cols) * cell_h
+		var plot_rect := Rect2(cx + pad_x, cy + pad_y, cell_w - pad_x * 2.0, cell_h - pad_y - 10.0)
+		# Background cell.
+		ledger_view.draw_rect(Rect2(cx + 4, cy + 4, cell_w - 8, cell_h - 8), Color(0.08, 0.12, 0.18, 0.8), true)
+		ledger_view.draw_rect(plot_rect, Color(0.1, 0.14, 0.22, 0.9), true)
+		# Gather data values.
+		var field: String = spec.field
+		var values: Array = []
+		for e in hist:
+			values.append(float(e.get(field, 0.0)))
+		var title_color: Color = spec.color
+		var title: String = Locale.t(String(spec.label_key))
+		if values.is_empty():
+			ledger_view.draw_string(font, Vector2(cx + pad_x, cy + pad_y - 8.0), title, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, title_color)
+			ledger_view.draw_string(font, plot_rect.position + Vector2(8, plot_rect.size.y / 2.0), Locale.t("LEDGER_EMPTY"), HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12, Color(0.6, 0.65, 0.75))
+			continue
+		var vmin: float = values[0]
+		var vmax: float = values[0]
+		for v in values:
+			vmin = min(vmin, v)
+			vmax = max(vmax, v)
+		if vmax - vmin < 1e-4:
+			vmax = vmin + 1.0
+		# Title + current value.
+		var cur: float = values[values.size() - 1]
+		ledger_view.draw_string(font, Vector2(cx + pad_x, cy + pad_y - 8.0), title, HORIZONTAL_ALIGNMENT_LEFT, -1.0, 14, title_color)
+		var cur_text: String = "%d" % int(round(cur))
+		ledger_view.draw_string(font, Vector2(cx + cell_w - pad_x - 70.0, cy + pad_y - 8.0), cur_text, HORIZONTAL_ALIGNMENT_RIGHT, 70.0, 14, Color(0.95, 0.95, 0.95))
+		# Polyline.
+		var pts := PackedVector2Array()
+		for k in range(values.size()):
+			var tx: float = plot_rect.position.x + plot_rect.size.x * float(k) / float(maxi(values.size() - 1, 1))
+			var ty: float = plot_rect.position.y + plot_rect.size.y * (1.0 - (values[k] - vmin) / (vmax - vmin))
+			pts.append(Vector2(tx, ty))
+		if pts.size() >= 2:
+			ledger_view.draw_polyline(pts, title_color, 1.8, true)
+		# Min/max ticks.
+		ledger_view.draw_string(font, plot_rect.position + Vector2(2, 10), "%d" % int(round(vmax)), HORIZONTAL_ALIGNMENT_LEFT, -1.0, 10, Color(0.6, 0.65, 0.75))
+		ledger_view.draw_string(font, plot_rect.position + Vector2(2, plot_rect.size.y - 2), "%d" % int(round(vmin)), HORIZONTAL_ALIGNMENT_LEFT, -1.0, 10, Color(0.6, 0.65, 0.75))
 
 func _build_panel(pos: Vector2, sz: Vector2) -> PanelContainer:
 	var p := PanelContainer.new()
@@ -391,6 +558,8 @@ func _input(event: InputEvent) -> void:
 					_refresh_tech()
 			KEY_H, KEY_QUESTION:
 				_toggle_help_panel()
+			KEY_L:
+				_toggle_ledger()
 			KEY_F5:
 				SaveLoad.save("main")
 			KEY_F9:
@@ -403,6 +572,7 @@ func _input(event: InputEvent) -> void:
 				save_panel.visible = false
 				help_panel.visible = false
 				province_panel.visible = false
+				ledger_panel.visible = false
 			_:
 				handled = false
 		if handled:
@@ -434,6 +604,10 @@ func _on_selection_changed(pid: int) -> void:
 
 func _on_log_message(_text: String, _color: Color) -> void:
 	_refresh_event_log()
+
+func _on_month_tick_ui() -> void:
+	if ledger_panel != null and ledger_panel.visible:
+		_refresh_ledger()
 
 # ---------- REFRESH ----------
 
@@ -548,11 +722,25 @@ func _refresh_province_panel() -> void:
 func _refresh_event_log() -> void:
 	if event_log_label == null:
 		return
-	var lines: Array = []
-	var start: int = maxi(0, GameState.event_log.size() - 30)
-	for i in range(start, GameState.event_log.size()):
-		lines.append(GameState.event_log[i])
-	event_log_label.text = "\n".join(lines)
+	# Collect only events whose category is currently enabled, then show the
+	# last 30 matching entries, colorized by the event's stored color.
+	var shown: Array = []
+	for e in GameState.event_log:
+		var cat: String = "general"
+		var text_s: String = ""
+		var color: Color = Color(0.85, 0.85, 0.85)
+		if typeof(e) == TYPE_DICTIONARY:
+			cat = String(e.get("category", "general"))
+			text_s = String(e.get("text", ""))
+			color = e.get("color", color)
+		else:
+			text_s = String(e)
+		if not _log_filters.get(cat, true):
+			continue
+		var hex := "#%02x%02x%02x" % [int(color.r * 255), int(color.g * 255), int(color.b * 255)]
+		shown.append("[color=%s]%s[/color]" % [hex, text_s])
+	var start: int = maxi(0, shown.size() - 30)
+	event_log_label.text = "\n".join(shown.slice(start, shown.size()))
 
 func _refresh_diplomacy() -> void:
 	for child in diplomacy_list.get_children():
@@ -760,7 +948,7 @@ func _on_recruit_pressed() -> void:
 	var cg: float = float(ut.get("cost_gold", 30))
 	var cm: float = float(ut.get("cost_manpower", 1000))
 	if pc.gold < cg or pc.manpower_pool < cm:
-		GameState.log_event("Not enough gold/manpower to recruit %s." % String(ut.get("name", best_type)), Color(1.0, 0.5, 0.5))
+		GameState.log_event("Not enough gold/manpower to recruit %s." % String(ut.get("name", best_type)), Color(1.0, 0.5, 0.5), GameState.LOG_CAT_ECON)
 		return
 	pc.gold -= cg
 	pc.manpower_pool -= cm
@@ -772,7 +960,7 @@ func _on_recruit_pressed() -> void:
 	u.strength = 5000
 	u.max_strength = 5000
 	GameState.add_unit(u)
-	GameState.log_event("Recruited %s in %s." % [String(ut.get("name", best_type)), GameState.provinces[pid].name], Color(0.8, 1.0, 0.8))
+	GameState.log_event("Recruited %s in %s." % [String(ut.get("name", best_type)), GameState.provinces[pid].name], Color(0.8, 1.0, 0.8), GameState.LOG_CAT_ECON)
 	_refresh_top_bar()
 	_refresh_province_panel()
 
@@ -802,7 +990,7 @@ func _on_recruit_navy_pressed() -> void:
 	var cg: float = float(ut.get("cost_gold", 80))
 	var cm: float = float(ut.get("cost_manpower", 500))
 	if pc.gold < cg or pc.manpower_pool < cm:
-		GameState.log_event("Not enough gold/manpower to build %s." % String(ut.get("name", best_type)), Color(1.0, 0.5, 0.5))
+		GameState.log_event("Not enough gold/manpower to build %s." % String(ut.get("name", best_type)), Color(1.0, 0.5, 0.5), GameState.LOG_CAT_ECON)
 		return
 	pc.gold -= cg
 	pc.manpower_pool -= cm
@@ -814,7 +1002,7 @@ func _on_recruit_navy_pressed() -> void:
 	u.strength = 4000
 	u.max_strength = 4000
 	GameState.add_unit(u)
-	GameState.log_event("Launched %s from %s." % [String(ut.get("name", best_type)), port.name], Color(0.6, 0.85, 1.0))
+	GameState.log_event("Launched %s from %s." % [String(ut.get("name", best_type)), port.name], Color(0.6, 0.85, 1.0), GameState.LOG_CAT_ECON)
 	_refresh_top_bar()
 	_refresh_province_panel()
 
@@ -1047,6 +1235,7 @@ func _help_panel_text() -> String:
 		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_F2") \
 		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_F3") \
 		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_H") \
+		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_LEDGER") \
 		+ "  [color=#aae]%s[/color]\n\n" % Locale.t("HELP_ESC") \
 		+ "[b]%s[/b]\n" % Locale.t("HELP_UNITS") \
 		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_SELECT") \
@@ -1058,7 +1247,7 @@ func _help_panel_text() -> String:
 		+ "  [color=#aae]%s[/color]\n" % Locale.t("HELP_LOAD")
 
 func _hotkey_hint_text() -> String:
-	return "F1=%s  F2=%s  F3=%s  H=?  F5=Save  F9=Load" % [Locale.t("DIPLO_TITLE"), Locale.t("COURT_TITLE"), Locale.t("TECH_TITLE")]
+	return "F1=%s  F2=%s  F3=%s  L=%s  H=?  F5=Save  F9=Load" % [Locale.t("DIPLO_TITLE"), Locale.t("COURT_TITLE"), Locale.t("TECH_TITLE"), Locale.t("LEDGER_TITLE")]
 
 func _apply_locale() -> void:
 	if hotkey_hint != null:
@@ -1089,6 +1278,15 @@ func _apply_locale() -> void:
 		save_btn.text = "%s [F5]" % Locale.t("ACT_SAVE")
 		load_btn.text = "%s [F9]" % Locale.t("ACT_LOAD")
 		save_close.text = Locale.t("PANEL_CLOSE")
+	# Log filter pill labels.
+	if _log_filter_buttons.has("war"):
+		_log_filter_buttons["war"].text = Locale.t("LOG_CAT_WAR")
+		_log_filter_buttons["diplo"].text = Locale.t("LOG_CAT_DIPLO")
+		_log_filter_buttons["econ"].text = Locale.t("LOG_CAT_ECON")
+		_log_filter_buttons["culture"].text = Locale.t("LOG_CAT_CULTURE")
+		_log_filter_buttons["general"].text = Locale.t("LOG_CAT_GENERAL")
+		for b in _log_filter_buttons.values():
+			b.tooltip_text = Locale.t("LOG_FILTER_TIP")
 	# Re-render dynamic panels that may already be open.
 	_refresh_top_bar()
 	if province_panel != null and province_panel.visible:
@@ -1099,6 +1297,8 @@ func _apply_locale() -> void:
 		_refresh_characters()
 	if tech_panel != null and tech_panel.visible:
 		_refresh_tech()
+	if ledger_panel != null and ledger_panel.visible:
+		_refresh_ledger()
 
 func _toggle_help_panel() -> void:
 	if help_panel == null:
@@ -1199,12 +1399,12 @@ func _on_build_pressed(p: Province, bid: String) -> void:
 	var bdef: Dictionary = GameState.buildings_db.get(bid, {})
 	var cost: float = float(bdef.get("cost_gold", 0))
 	if pc.gold < cost:
-		GameState.log_event(Locale.t("EVT_BUILDING_CANT_AFFORD") % _building_name(bid), Color(1.0, 0.7, 0.5))
+		GameState.log_event(Locale.t("EVT_BUILDING_CANT_AFFORD") % _building_name(bid), Color(1.0, 0.7, 0.5), GameState.LOG_CAT_ECON)
 		return
 	pc.gold -= cost
 	p.build_id = bid
 	p.build_progress_months = 0.0
-	GameState.log_event(Locale.t("EVT_BUILDING_START") % [_building_name(bid), p.name], Color(0.7, 0.9, 1.0))
+	GameState.log_event(Locale.t("EVT_BUILDING_START") % [_building_name(bid), p.name], Color(0.7, 0.9, 1.0), GameState.LOG_CAT_ECON)
 	_refresh_top_bar()
 	_refresh_province_panel()
 
@@ -1225,7 +1425,7 @@ func _on_convert_religion_pressed() -> void:
 	pc.gold -= CONVERT_GOLD_COST
 	p.convert_religion_to = pc.state_religion
 	p.convert_religion_months = CONVERT_DURATION_MONTHS
-	GameState.log_event(Locale.t("EVT_CONVERT_START") % [p.name, int(CONVERT_DURATION_MONTHS)], Color(0.85, 0.7, 1.0))
+	GameState.log_event(Locale.t("EVT_CONVERT_START") % [p.name, int(CONVERT_DURATION_MONTHS)], Color(0.85, 0.7, 1.0), GameState.LOG_CAT_CULTURE)
 	_refresh_top_bar()
 	_refresh_province_panel()
 
@@ -1246,6 +1446,6 @@ func _on_convert_culture_pressed() -> void:
 	pc.gold -= CULTURE_GOLD_COST
 	p.convert_culture_to = pc.primary_culture
 	p.convert_culture_months = CULTURE_DURATION_MONTHS
-	GameState.log_event(Locale.t("EVT_CULTURE_START") % [p.name, int(CULTURE_DURATION_MONTHS)], Color(0.7, 0.9, 0.95))
+	GameState.log_event(Locale.t("EVT_CULTURE_START") % [p.name, int(CULTURE_DURATION_MONTHS)], Color(0.7, 0.9, 0.95), GameState.LOG_CAT_CULTURE)
 	_refresh_top_bar()
 	_refresh_province_panel()
