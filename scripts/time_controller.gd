@@ -157,6 +157,7 @@ func _on_month() -> void:
 				var need: float = float(bd.get("build_months", 1))
 				if p.build_progress_months >= need:
 					p.buildings.append(p.build_id)
+					p.fort_level += int(bd.get("fort_level_bonus", 0))
 					GameState.log_event("[%s] %s built in %s." % [c.name, String(bd.get("name_key", p.build_id)), p.name], Color(0.7, 0.9, 1.0), GameState.LOG_CAT_ECON)
 					p.build_id = ""
 					p.build_progress_months = 0.0
@@ -206,7 +207,62 @@ func _on_month() -> void:
 				GameState.log_event("[%s] %s researched %s." % [c.id, c.name, String(tdef.get("name", c.current_research))], Color(0.6, 0.85, 1.0), GameState.LOG_CAT_ECON)
 				c.current_research = ""
 		GameState.country_state_changed.emit(cid)
+	_process_sieges_and_attrition()
 	GameState.push_ledger_snapshot()
+
+## Monthly: advance active sieges, apply attrition to units in hostile territory.
+func _process_sieges_and_attrition() -> void:
+	for p in GameState.provinces:
+		if p.is_sea:
+			continue
+		# Does the siege attacker still have a unit sitting on this province?
+		if p.siege_attacker_id == "":
+			continue
+		var attacker_present: bool = false
+		for uid in GameState.units.keys():
+			var u: ArmyUnit = GameState.units[uid]
+			if u == null:
+				continue
+			if u.province_id == p.id and u.owner_id == p.siege_attacker_id:
+				attacker_present = true
+				break
+		if not attacker_present:
+			p.siege_attacker_id = ""
+			p.siege_progress = 0.0
+			continue
+		# Cancel any ongoing siege once the two countries are at peace — a
+		# signed treaty should not allow territorial flips to keep ticking.
+		var attacker_c: Country = GameState.countries.get(p.siege_attacker_id)
+		if attacker_c == null or not attacker_c.at_war_with.has(p.owner_id):
+			p.siege_attacker_id = ""
+			p.siege_progress = 0.0
+			continue
+		# Advance siege: harder forts take longer. Duration in months.
+		var duration: float = 6.0 * float(max(1, p.fort_level)) + 3.0
+		p.siege_progress += 1.0 / duration
+		if p.siege_progress >= 1.0:
+			GameState.flip_province_ownership(p, p.siege_attacker_id)
+			# Fort is damaged by a successful siege.
+			p.fort_level = max(0, p.fort_level - 1)
+	# Attrition: foreign land hits units 3%/month in peaceful land, 6% at war.
+	for uid in GameState.units.keys():
+		var u: ArmyUnit = GameState.units[uid]
+		if u == null or u.province_id < 0:
+			continue
+		var p: Province = GameState.provinces[u.province_id]
+		if p == null or p.is_sea:
+			continue
+		if p.owner_id == "" or p.owner_id == u.owner_id:
+			continue
+		var c: Country = GameState.countries.get(u.owner_id)
+		var at_war: bool = c != null and c.at_war_with.has(p.owner_id)
+		var loss_frac: float = 0.06 if at_war else 0.03
+		match p.terrain:
+			Province.Terrain.DESERT, Province.Terrain.JUNGLE, Province.Terrain.TUNDRA, Province.Terrain.MOUNTAINS:
+				loss_frac += 0.02
+		u.strength = max(0, int(float(u.strength) * (1.0 - loss_frac)))
+		if u.strength < 200:
+			GameState.remove_unit(uid)
 
 func _on_year() -> void:
 	# Yearly: relations decay toward 0, characters age.

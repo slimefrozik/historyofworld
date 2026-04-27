@@ -176,6 +176,35 @@ func push_ledger_snapshot() -> void:
 	if ledger_history.size() > 240:
 		ledger_history.pop_front()
 
+## Transfer `dest` province to `new_owner_id`. Shared by instant capture
+## (unfortified provinces) and siege completion. Logs + emits the owner-changed
+## signal and handles capital rotation.
+func flip_province_ownership(dest: Province, new_owner_id: String) -> void:
+	var prev_owner: Country = countries.get(dest.owner_id)
+	var c: Country = countries.get(new_owner_id)
+	if c == null:
+		return
+	if prev_owner != null:
+		prev_owner.province_ids.erase(dest.id)
+	dest.owner_id = new_owner_id
+	dest.unrest = 4.0
+	dest.siege_attacker_id = ""
+	dest.siege_progress = 0.0
+	if not c.province_ids.has(dest.id):
+		c.province_ids.append(dest.id)
+	c.prestige = clamp(c.prestige + 5.0, -100.0, 100.0)
+	if prev_owner != null:
+		prev_owner.prestige = clamp(prev_owner.prestige - 5.0, -100.0, 100.0)
+		if dest.is_capital:
+			prev_owner.stability = max(-3.0, prev_owner.stability - 1.5)
+			log_event("[CAPITAL!] %s seized %s's capital %s!" % [c.name, prev_owner.name, dest.name], Color(1.0, 0.5, 0.5), LOG_CAT_WAR)
+			if prev_owner.province_ids.size() > 0:
+				prev_owner.capital_id = prev_owner.province_ids[0]
+				provinces[prev_owner.capital_id].is_capital = true
+			dest.is_capital = false
+	log_event("[OCC] %s captured %s from %s." % [c.name, dest.name, prev_owner.name if prev_owner else "?"], Color(0.95, 0.7, 0.4), LOG_CAT_WAR)
+	province_owner_changed.emit(dest.id)
+
 func date_string() -> String:
 	var era_label := "BC" if year < 0 else "AD"
 	var y := absi(year)

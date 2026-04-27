@@ -31,6 +31,15 @@ var convert_religion_to: String = ""
 var convert_religion_months: float = 0.0
 var convert_culture_to: String = ""
 var convert_culture_months: float = 0.0
+## Fortification level (0 = none, 1..3 = small/medium/great fort).
+## Drives siege duration and adds flat defensive bonus.
+var fort_level: int = 0
+## Current siege state. `siege_attacker_id` is the attacker's country id (the
+## one trying to capture the province from `owner_id`). `siege_progress` is
+## 0..1; reaches 1.0 → attacker flips the province. Resets if defenders retake
+## the province or the attacker's stack leaves.
+var siege_attacker_id: String = ""
+var siege_progress: float = 0.0
 
 func base_tax() -> float:
 	return float(development) * 0.5
@@ -53,12 +62,15 @@ func terrain_name() -> String:
 	return "Unknown"
 
 func combat_bonus_for_defender() -> float:
+	var base: float = 0.0
 	match terrain:
-		Terrain.MOUNTAINS: return 0.40
-		Terrain.HILLS: return 0.20
-		Terrain.FOREST, Terrain.JUNGLE: return 0.15
-		Terrain.DESERT, Terrain.TUNDRA: return 0.05
-		_: return 0.0
+		Terrain.MOUNTAINS: base = 0.40
+		Terrain.HILLS: base = 0.20
+		Terrain.FOREST, Terrain.JUNGLE: base = 0.15
+		Terrain.DESERT, Terrain.TUNDRA: base = 0.05
+		_: base = 0.0
+	# Each fort level adds 15% to the defender's damage roll.
+	return base + 0.15 * float(fort_level)
 
 func to_dict() -> Dictionary:
 	return {
@@ -73,6 +85,9 @@ func to_dict() -> Dictionary:
 		"convert_religion_months": convert_religion_months,
 		"convert_culture_to": convert_culture_to,
 		"convert_culture_months": convert_culture_months,
+		"fort_level": fort_level,
+		"siege_attacker_id": siege_attacker_id,
+		"siege_progress": siege_progress,
 	}
 
 static func from_dict(d: Dictionary) -> Province:
@@ -105,4 +120,7 @@ static func from_dict(d: Dictionary) -> Province:
 	p.convert_religion_months = float(d.get("convert_religion_months", 0.0))
 	p.convert_culture_to = String(d.get("convert_culture_to", ""))
 	p.convert_culture_months = float(d.get("convert_culture_months", 0.0))
+	p.fort_level = int(d.get("fort_level", 0))
+	p.siege_attacker_id = String(d.get("siege_attacker_id", ""))
+	p.siege_progress = float(d.get("siege_progress", 0.0))
 	return p

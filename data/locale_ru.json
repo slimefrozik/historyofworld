@@ -165,6 +165,10 @@
   "BLD_WORKSHOP_DESC": "+25% к местной науке",
   "BLD_HARBOUR": "Гавань",
   "BLD_HARBOUR_DESC": "+50% к местной торговле, открывает дальние флоты",
+  "BLD_FORT": "Крепость",
+  "BLD_FORT_DESC": "+1 уровень крепости (вынуждает осаду, +15% защите, +500 гарнизона)",
+  "PROVINCE_FORT_LEVEL": "Крепость",
+  "PROVINCE_SIEGE": "Осада: %s (%d%%)",
 
   "EVT_BUILDING_DONE": "%s достроено в %s.",
   "EVT_BUILDING_START": "Начато строительство %s в %s.",

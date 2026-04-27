@@ -670,6 +670,12 @@ func _refresh_province_panel() -> void:
 		var res_label := Locale.t("RESOURCE_NONE") if p.resource == "" else _resource_label(p.resource)
 		t += "%s: [color=#e0c080]%s[/color]\n" % [Locale.t("PANEL_RESOURCE"), res_label]
 		t += "%s: %d   %s: %.1f\n" % [Locale.t("PANEL_GARRISON"), p.garrison, Locale.t("PANEL_UNREST"), p.unrest]
+		if p.fort_level > 0:
+			t += "[color=#e7c97a]%s: %d[/color]\n" % [Locale.t("PROVINCE_FORT_LEVEL"), p.fort_level]
+		if p.siege_attacker_id != "" and p.siege_progress > 0.0:
+			var sc: Country = GameState.countries.get(p.siege_attacker_id)
+			var who := sc.name if sc != null else p.siege_attacker_id
+			t += "[color=#ff8080]%s[/color]\n" % (Locale.t("PROVINCE_SIEGE") % [who, int(p.siege_progress * 100.0)])
 		# Buildings
 		var bld_text := ""
 		if p.buildings.size() > 0:

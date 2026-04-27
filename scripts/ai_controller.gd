@@ -5,11 +5,74 @@ func _ready() -> void:
 	TimeCtl.month_tick.connect(_on_month)
 
 func _on_month() -> void:
+	var hegemon: String = _pick_hegemon()
 	for cid in GameState.countries.keys():
 		var c: Country = GameState.countries[cid]
 		if not c.is_alive or c.is_player:
 			continue
 		_ai_run(c)
+		if hegemon != "" and hegemon != c.id:
+			_ai_coalition_reaction(c, hegemon)
+
+## Returns the country id of the dominant power if any single country owns more
+## than 1.8x the average province count of living countries. "" if nobody
+## dominates.
+func _pick_hegemon() -> String:
+	var alive: Array = []
+	for cid in GameState.countries.keys():
+		var c: Country = GameState.countries[cid]
+		if c.is_alive:
+			alive.append(c)
+	if alive.size() < 3:
+		return ""
+	var total: int = 0
+	var biggest: Country = null
+	for c in alive:
+		total += c.province_ids.size()
+		if biggest == null or c.province_ids.size() > biggest.province_ids.size():
+			biggest = c
+	if biggest == null or total == 0:
+		return ""
+	var avg: float = float(total) / float(alive.size())
+	if float(biggest.province_ids.size()) >= 1.8 * avg:
+		return biggest.id
+	return ""
+
+## A single AI country reacts to a dominant hegemon: it worsens relations with
+## them, prefers to ally rival powers that also fear the hegemon, and under the
+## right conditions joins a coalition war.
+func _ai_coalition_reaction(c: Country, hegemon_id: String) -> void:
+	if c.allies.has(hegemon_id):
+		return
+	# Steady diplomatic drift away from the hegemon.
+	GameState.change_relations(c.id, hegemon_id, -2)
+	# Ally up with a same-fear rival.
+	if c.allies.size() < 3 and GameState.rng.randf() < 0.35:
+		var candidates: Array = []
+		for oid in GameState.countries.keys():
+			if oid == c.id or oid == hegemon_id:
+				continue
+			var o: Country = GameState.countries[oid]
+			if not o.is_alive or o.allies.has(hegemon_id) or o.id == hegemon_id:
+				continue
+			if c.at_war_with.has(oid) or c.allies.has(oid):
+				continue
+			if GameState.relations_score(c.id, oid) >= 0:
+				candidates.append(oid)
+		if not candidates.is_empty():
+			var pick: String = String(candidates[GameState.rng.randi_range(0, candidates.size() - 1)])
+			form_alliance(c.id, pick)
+	# Once a proper coalition exists (enough combined provinces) declare war.
+	if not c.at_war_with.has(hegemon_id) and GameState.rng.randf() < 0.06:
+		var coalition_provinces: int = c.province_ids.size()
+		for aid in c.allies:
+			var a: Country = GameState.countries.get(aid)
+			if a != null and a.is_alive:
+				coalition_provinces += a.province_ids.size()
+		var h: Country = GameState.countries.get(hegemon_id)
+		if h != null and coalition_provinces >= int(float(h.province_ids.size()) * 0.9):
+			if GameState.relations_score(c.id, hegemon_id) <= -40:
+				declare_war(c.id, hegemon_id)
 
 func _ai_run(c: Country) -> void:
 	# 1. Pick research if none
@@ -152,6 +215,15 @@ func make_peace(a: String, b: String) -> void:
 	ca.at_war_with.erase(b)
 	cb.at_war_with.erase(a)
 	GameState.change_relations(a, b, 30)
+	# Clear any ongoing sieges between the two parties (in both directions).
+	for p in GameState.provinces:
+		if p.is_sea: continue
+		if p.siege_attacker_id == "": continue
+		var between_ab: bool = (p.siege_attacker_id == a and p.owner_id == b) or (p.siege_attacker_id == b and p.owner_id == a)
+		if between_ab:
+			p.siege_attacker_id = ""
+			p.siege_progress = 0.0
+			GameState.province_owner_changed.emit(p.id)
 	GameState.log_event("[PEACE] %s and %s signed a treaty." % [ca.name, cb.name], Color(0.7, 1.0, 0.7), GameState.LOG_CAT_WAR)
 
 func form_alliance(a: String, b: String) -> void:

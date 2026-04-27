@@ -36,4 +36,6 @@ func _ready() -> void:
 			if country_provinces[cid] == 0: empty.append(cid)
 		if empty.size() > 0:
 			print("  EMPTY COUNTRIES: ", empty)
+		if era == "antiquity":
+			print("  PER provinces=", country_provinces.get("PER", -1), " PAR provinces=", country_provinces.get("PAR", -1))
 	get_tree().quit()

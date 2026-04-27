@@ -90,6 +90,8 @@ func _ready() -> void:
 	GameState.selection_changed.connect(_on_selection_changed)
 	# Units redraw every day so animated movement is smooth.
 	TimeCtl.day_tick.connect(_redraw_units)
+	# Sieges advance monthly — force base redraw so progress arcs update.
+	TimeCtl.month_tick.connect(_request_redraw)
 	queue_redraw()
 
 func _on_world_ready() -> void:
@@ -166,11 +168,30 @@ func _draw() -> void:
 			if np.owner_id != p.owner_id:
 				draw_line(p.center, np.center, Color(0, 0, 0, 0.55), 1.5, true)
 
-	# Capital markers
+	# Rivers — draw after land fills but before capital markers so they sit on top of land.
+	var rivers: Array = WorldGen.rivers_world()
+	for poly in rivers:
+		if poly.size() >= 2:
+			draw_polyline(poly, Color(0.55, 0.80, 0.95, 0.85), 2.5, true)
+
+	# Capital markers + siege/fort indicators
 	for p in GameState.provinces:
 		if p.is_capital:
 			draw_circle(p.center, 5.0, Color(1, 1, 0.5, 0.9))
 			draw_arc(p.center, 7.0, 0, TAU, 24, Color(0.4, 0.3, 0.1, 0.8), 1.5)
+		# Fort marker — small chevron
+		if not p.is_sea and p.fort_level > 0:
+			var s: float = 3.0 + 1.2 * float(p.fort_level)
+			var pts := PackedVector2Array([
+				p.center + Vector2(-s, s * 0.5),
+				p.center + Vector2(0, -s),
+				p.center + Vector2(s, s * 0.5),
+			])
+			draw_polyline(pts, Color(0.95, 0.85, 0.55, 0.95), 1.5, true)
+		# Siege marker — red ring
+		if not p.is_sea and p.siege_progress > 0.0:
+			var frac: float = clamp(p.siege_progress, 0.0, 1.0)
+			draw_arc(p.center, 13.0, -PI * 0.5, -PI * 0.5 + frac * TAU, 24, Color(1, 0.3, 0.3, 0.9), 2.0)
 
 	# Selection highlight
 	if GameState.selected_province_id >= 0 and GameState.selected_province_id < GameState.provinces.size():
